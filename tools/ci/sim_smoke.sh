@@ -58,13 +58,33 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Wait until a command succeeds, retrying every 5 s, or fail after a timeout.
+# Show the lines of a log that usually explain a failure, then its tail.
+show_log() {
+  local file="$1"
+  [[ -f "$file" ]] || return 0
+  echo "----- errors in ${file#"$WS"/} -----"
+  grep -nE 'ERROR|\[Err\]|died|exception|Traceback|EGL|[Rr]endering' "$file" | head -n 30 || true
+  echo "----- last 40 lines of ${file#"$WS"/} -----"
+  tail -n 40 "$file"
+}
+
+# Wait until a command succeeds, retrying every 5 s. Fails early if the launch
+# writing to the log has stopped or reports a crashed process, and fails
+# after the timeout otherwise. Either way, prints that log's useful lines.
 wait_for() {
-  local what="$1" timeout_s="$2"; shift 2
+  local what="$1" timeout_s="$2" pid="$3" logfile="$4"; shift 4
   local start=$SECONDS
   log "waiting for $what (up to ${timeout_s}s)"
   until "$@" > /dev/null 2>&1; do
-    (( SECONDS - start < timeout_s )) || fail "$what not ready after ${timeout_s}s"
+    if ! kill -0 "$pid" 2>/dev/null; then
+      show_log "$logfile"; fail "$what: the launch exited after $(( SECONDS - start ))s"
+    fi
+    if grep -q 'process has died' "$logfile" 2>/dev/null; then
+      show_log "$logfile"; fail "$what: a process died after $(( SECONDS - start ))s"
+    fi
+    if (( SECONDS - start >= timeout_s )); then
+      show_log "$logfile"; fail "$what not ready after ${timeout_s}s"
+    fi
     sleep 5
   done
   log "$what ready after $(( SECONDS - start ))s"
@@ -94,19 +114,19 @@ PIDS+=($!)
 
 sim_ready() {
   timeout 8 ros2 topic echo /clock --once &&
-    ros2 topic list --no-daemon | grep -qx "/$NS/platform/odom/filtered"
+    ros2 topic list --no-daemon | grep -x "/$NS/platform/odom/filtered"
 }
-wait_for "simulation clock and odometry" "$SIM_TIMEOUT_S" sim_ready
+wait_for "simulation clock and odometry" "$SIM_TIMEOUT_S" "${PIDS[0]}" "$OUT/sim.log" sim_ready
 
 # --- Nav2 with SLAM -------------------------------------------------------------
 setsid ros2 launch bird_nose_bringup nav2.launch.py > "$OUT/nav2.log" 2>&1 &
 PIDS+=($!)
 
 nav2_ready() {
-  ros2 lifecycle get "/$NS/bt_navigator" | grep -q '^active' &&
+  ros2 lifecycle get "/$NS/bt_navigator" | grep '^active' &&
     timeout 10 ros2 topic echo "/$NS/map" --once
 }
-wait_for "Nav2 active and SLAM map published" "$NAV2_TIMEOUT_S" nav2_ready
+wait_for "Nav2 active and SLAM map published" "$NAV2_TIMEOUT_S" "${PIDS[1]}" "$OUT/nav2.log" nav2_ready
 
 # --- One goal ---------------------------------------------------------------------
 GOAL="{pose: {header: {frame_id: map}, pose: {position: {x: $GOAL_X, y: $GOAL_Y, z: 0.0}, orientation: {w: 1.0}}}}"
@@ -118,5 +138,6 @@ if grep -q 'SUCCEEDED' "$OUT/goal.log"; then
   log "PASS: goal reached in $(( SECONDS - start ))s"
   echo "- Result: **PASS**, goal reached in $(( SECONDS - start )) s" >> "$OUT/report.md"
 else
+  show_log "$OUT/goal.log"
   fail "goal not reached within ${GOAL_TIMEOUT_S}s (see goal.log)"
 fi

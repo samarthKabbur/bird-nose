@@ -48,7 +48,7 @@ A module folder is any top-level folder, any folder directly under `config/` or 
 | `GOAL_TIMEOUT_S` | `180` | Seconds allowed to reach the goal |
 | `ROBOT_YAML` | `config/robots/husky-a200/robot.yaml` | Robot to simulate; the namespace is read from it |
 
-It refuses to run when `ROS_DOMAIN_ID` is `0` or unset, or when `ROS_AUTOMATIC_DISCOVERY_RANGE` is not `LOCALHOST`, so it cannot reach the physical robot. Logs (`colcon_build.log`, `sim.log`, `nav2.log`, `goal.log`) and `report.md` go to `data/reports/sim_smoke/<UTC time>/`.
+It refuses to run when `ROS_DOMAIN_ID` is `0` or unset, or when `ROS_AUTOMATIC_DISCOVERY_RANGE` is not `LOCALHOST`, so it cannot reach the physical robot. Logs (`colcon_build.log`, `sim.log`, `nav2.log`, `goal.log`) and `report.md` go to `data/reports/sim_smoke/<UTC time>/`. On a failure it prints the error lines and the last 40 lines of the log for the step that failed. It stops early, without waiting for the timeout, when a launch exits or reports `process has died`.
 
 ## Testing
 
