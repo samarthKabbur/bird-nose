@@ -1,0 +1,4 @@
+# Extra source repositories, imported with:
+#   vcs import src < dependencies.repos
+# Empty for now: every dependency comes from apt packages in containers/Dockerfile.
+repositories: {}
