@@ -1,4 +1,5 @@
-"""Foxglove Bridge for live dashboards.
+"""
+Foxglove Bridge for live dashboards.
 
 Listens on 127.0.0.1 by default so it is never exposed on a network. From
 another computer, use an SSH tunnel:

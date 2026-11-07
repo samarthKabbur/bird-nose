@@ -1,4 +1,5 @@
-"""Placeholder autonomy node: publishes a heartbeat so the pipeline can be tested.
+"""
+Placeholder autonomy node: publishes a heartbeat so the pipeline can be tested.
 
 Real Bird Nose algorithms replace this behind stable topic and action
 interfaces in Phase 4.

@@ -1,4 +1,5 @@
-"""Nav2 with SLAM for the simulated robot (finalized in Phase 2).
+"""
+Nav2 with SLAM for the simulated robot (finalized in Phase 2).
 
 Uses Clearpath's Nav2 demos against the setup folder written by
 sim.launch.py, with simulation time.

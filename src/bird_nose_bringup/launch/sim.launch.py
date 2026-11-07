@@ -1,11 +1,12 @@
-"""Simulated Husky A200 in Gazebo Harmonic.
+"""
+Simulated Husky A200 in Gazebo Harmonic.
 
 Copies the repository's robot.yaml into a scratch setup folder (Clearpath's
 generators write files next to robot.yaml, which must not land in Git), then
 starts Clearpath's simulation from that folder.
 
-Example:
-    ros2 launch bird_nose_bringup sim.launch.py world:=warehouse rviz:=true
+For example, to start the warehouse world with RViz, run
+ros2 launch bird_nose_bringup sim.launch.py world:=warehouse rviz:=true
 """
 import os
 import shutil
