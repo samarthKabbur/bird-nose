@@ -31,6 +31,8 @@ x-ros-common: &ros-common
       USERNAME: ${CONTAINER_USER:-dev}
       USER_UID: ${HOST_UID:-1000}
       USER_GID: ${HOST_GID:-1000}
+      VIDEO_GID: ${VIDEO_GID:-44}
+      RENDER_GID: ${RENDER_GID:-993}
   network_mode: host
   ipc: host
   environment:

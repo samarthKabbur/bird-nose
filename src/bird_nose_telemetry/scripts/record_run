@@ -5,9 +5,12 @@
 #   ros2 run bird_nose_telemetry record_run <short-name> [topic ...]
 #
 #   <short-name>  what this run tests, e.g. first-sim-nav2 (letters, digits, - and _)
-#   [topic ...]   topics to record; default is every topic
+#   [topic ...]   topics to record; default is every topic except point
+#                 clouds and camera images, which are very large (a minute of
+#                 Ouster point clouds is several GB)
 #
 # Optional environment variables:
+#   FULL=1     with no topics given, record everything, point clouds included
 #   SCENARIO   scenario name (default: none)
 #   SEED       random seed (default: none)
 #   NOTES      operator notes (default: asked for at the end)
@@ -55,9 +58,15 @@ echo "Commit ${git_commit} (${git_branch}, uncommitted changes: ${git_dirty}). P
 # Ctrl+C should stop ros2 bag, not this script, so the metadata still gets written.
 trap ':' INT
 if (( ${#topics[@]} )); then
+  selection="listed topics"
   ros2 bag record -s mcap -o "${out_dir}" "${topics[@]}" || true
-else
+elif [[ "${FULL:-0}" == "1" ]]; then
+  selection="all topics"
   ros2 bag record -s mcap -o "${out_dir}" --all || true
+else
+  selection="all topics except point clouds and images"
+  ros2 bag record -s mcap -o "${out_dir}" --all \
+    --exclude-topic-types sensor_msgs/msg/PointCloud2 sensor_msgs/msg/Image || true
 fi
 trap - INT
 
@@ -94,6 +103,7 @@ nav2_config_revision: $(yaml_str "${nav2_rev}")
 ros:
   domain_id: $(yaml_str "${ROS_DOMAIN_ID:-unset}")
   rmw: $(yaml_str "${RMW_IMPLEMENTATION:-unset}")
+topics: $(yaml_str "${selection}")
 scenario: $(yaml_str "${SCENARIO:-none}")
 seed: $(yaml_str "${SEED:-none}")
 operator_notes: $(yaml_str "${notes}")
