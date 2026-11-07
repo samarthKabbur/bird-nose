@@ -1,0 +1,5 @@
+# actionlint settings. Custom labels of the team's self-hosted runner,
+# so actionlint accepts them in runs-on (see docs/ci.md).
+self-hosted-runner:
+  labels:
+    - bird-nose-sim

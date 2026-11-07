@@ -1,0 +1,115 @@
+# Checks every pull request and every push to main on GitHub-hosted runners.
+# These jobs are the ones to require in main's branch protection.
+# See docs/ci.md for what each job does and how to reproduce it locally.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The token can read the repository and nothing else.
+permissions:
+  contents: read
+
+# A new push to a pull request cancels that pull request's older run.
+# Runs on main are never cancelled, so every merge gets a full result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Docs, scripts, and config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Docs match the code
+        run: python3 tools/ci/check_docs.py
+
+      - name: Shell scripts
+        # tools/robot/ holds Nuvo's scripts, preserved unchanged until Phase 5.
+        run: |
+          scripts=(tools/*.sh tools/ci/*.sh containers/entrypoint.sh src/bird_nose_telemetry/scripts/record_run)
+          for f in "${scripts[@]}"; do bash -n "$f"; done
+          shellcheck --severity=warning "${scripts[@]}"
+
+      - name: Compose files and every profile and overlay
+        run: |
+          cp containers/.env.example containers/.env
+          for overlay in "" containers/compose.nvidia.yaml containers/compose.hardware.yaml; do
+            files=(-f containers/compose.yaml)
+            [[ -n "$overlay" ]] && files+=(-f "$overlay")
+            for profile in "" sim operator telemetry; do
+              args=("${files[@]}")
+              [[ -n "$profile" ]] && args+=(--profile "$profile")
+              echo "docker compose ${args[*]} config"
+              docker compose "${args[@]}" config --quiet
+            done
+          done
+
+      - name: Workflow files
+        # actionlint, downloaded at a fixed version and checked against its
+        # published SHA-256 before it runs.
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          tarball="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$tarball" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$tarball"
+          echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/$tarball" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+
+  build-test:
+    name: colcon build and test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # The same pinned base image as containers/Dockerfile, without Clearpath,
+    # Gazebo, or Nav2: unit tests need only build and test dependencies.
+    container:
+      image: ros:jazzy-ros-base-noble@sha256:8eed0a4669bbf43ee331878a4c39bd8ebddea8e3312a58b4fae8edb14526b617
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install build and test dependencies
+        # Runtime-only dependencies (Clearpath simulator, Nav2, Foxglove) are
+        # skipped; the full set is checked by the Docker image build.
+        run: |
+          apt-get update
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src --ignore-src -y --rosdistro jazzy \
+            --dependency-types build --dependency-types buildtool --dependency-types test
+
+      - name: Build
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --event-handlers console_cohesion+
+
+      - name: Test
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon test --event-handlers console_cohesion+
+          colcon test-result --verbose
+
+      - name: Keep test results for a week
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: test-results
+          path: build/*/test_results/
+          retention-days: 7
+          if-no-files-found: ignore
