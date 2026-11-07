@@ -66,7 +66,7 @@ show_log() {
   local file="$1"
   [[ -f "$file" ]] || return 0
   echo "----- errors in ${file#"$WS"/} -----"
-  grep -nE 'ERROR|\[Err\]|died|exception|Traceback|EGL|[Rr]endering' "$file" | head -n 30 || true
+  grep -nE 'ERROR|WARN|\[Err\]|died|exception|Traceback|EGL|[Rr]endering|[Aa]bort|[Ff]ail' "$file" | tail -n 40 || true
   echo "----- last 40 lines of ${file#"$WS"/} -----"
   tail -n 40 "$file"
   # Known cause: an NVIDIA card (PCI vendor 10de) is visible in /dev/dri but
@@ -145,10 +145,18 @@ log "sending goal x=$GOAL_X y=$GOAL_Y"
 start=$SECONDS
 timeout "$GOAL_TIMEOUT_S" ros2 action send_goal "/$NS/navigate_to_pose" \
   nav2_msgs/action/NavigateToPose "$GOAL" > "$OUT/goal.log" 2>&1 || true
-if grep -q 'SUCCEEDED' "$OUT/goal.log"; then
-  log "PASS: goal reached in $(( SECONDS - start ))s"
-  echo "- Result: **PASS**, goal reached in $(( SECONDS - start )) s" >> "$OUT/report.md"
+status="$(sed -n 's/^Goal finished with status: //p' "$OUT/goal.log" | tail -n 1)"
+elapsed=$(( SECONDS - start ))
+if [[ "$status" == "SUCCEEDED" ]]; then
+  log "PASS: goal reached in ${elapsed}s"
+  echo "- Result: **PASS**, goal reached in ${elapsed} s" >> "$OUT/report.md"
 else
+  # Nav2's log says why a goal was aborted (planner, controller, costmap).
   show_log "$OUT/goal.log"
-  fail "goal not reached within ${GOAL_TIMEOUT_S}s (see goal.log)"
+  show_log "$OUT/nav2.log"
+  if [[ -n "$status" ]]; then
+    fail "goal finished with status $status after ${elapsed}s (see nav2.log)"
+  else
+    fail "no result within ${GOAL_TIMEOUT_S}s (see goal.log and nav2.log)"
+  fi
 fi
