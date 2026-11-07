@@ -3,7 +3,7 @@
 <package format="3">
   <name>bird_nose_sim</name>
   <version>0.0.1</version>
-  <description>Bird Nose Gazebo worlds and scenario assets.</description>
+  <description>Gazebo Harmonic worlds and simulation assets for Bird Nose scenarios.</description>
   <maintainer email="samarthKabbur@users.noreply.github.com">Samarth Kabbur</maintainer>
   <license>TODO</license>
 

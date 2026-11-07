@@ -14,5 +14,6 @@
 
 ## Checklist
 
+- [ ] Docs updated in the same PR: the README of every module touched, including interface tables for new or changed topics, services, actions, and parameters
 - [ ] No machine-local addresses, credentials, or recordings committed
 - [ ] Does not touch the physical robot, or the hardware safety controls are documented

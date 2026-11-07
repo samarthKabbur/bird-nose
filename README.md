@@ -4,7 +4,7 @@ ROS 2 software for Bird Nose, a Clearpath Husky A200 that identifies birds by so
 
 Everything ROS-related runs in Docker containers: ROS 2 Jazzy, Gazebo Harmonic, Nav2, and Clearpath's Jazzy packages. A computer needs only Docker and Git, so every machine runs the same environment.
 
-The plan, decisions, and lab findings live in the team's living architecture doc; this README covers how to use the repository.
+The plan, decisions, and lab findings live in the team's living architecture doc; this README covers how to use the repository. For how the pieces fit together, start with [docs/architecture.md](docs/architecture.md); unfamiliar terms are in [docs/glossary.md](docs/glossary.md). Every folder below has its own README.
 
 ## Quick start (Ubuntu workstation)
 
@@ -78,17 +78,18 @@ bird-nose/
 │   ├── dev.sh              one-command development environment
 │   └── robot/              robot container scripts (wired up in Phase 5)
 ├── data/                   bags, logs, reports (contents never committed)
+├── docs/                   architecture diagrams and glossary
 └── dependencies.repos      extra source repositories for vcs import
 ```
 
 | Package | Purpose |
 | --- | --- |
-| `bird_nose_bringup` | Launch entry points: simulation, Nav2, RViz |
-| `bird_nose_description` | Bird Nose payloads (microphone modules, crossbar) |
-| `bird_nose_navigation` | Nav2 parameters, maps, behavior trees |
-| `bird_nose_sim` | Gazebo worlds and scenario assets |
-| `bird_nose_algorithms` | Bird Nose autonomy nodes |
-| `bird_nose_telemetry` | Foxglove Bridge and MCAP recording |
+| [`bird_nose_bringup`](src/bird_nose_bringup/README.md) | Launch entry points: simulation, Nav2, RViz |
+| [`bird_nose_description`](src/bird_nose_description/README.md) | Bird Nose payloads (microphone modules, crossbar) |
+| [`bird_nose_navigation`](src/bird_nose_navigation/README.md) | Nav2 parameters, maps, behavior trees |
+| [`bird_nose_sim`](src/bird_nose_sim/README.md) | Gazebo worlds and scenario assets |
+| [`bird_nose_algorithms`](src/bird_nose_algorithms/README.md) | Bird Nose autonomy nodes |
+| [`bird_nose_telemetry`](src/bird_nose_telemetry/README.md) | Foxglove Bridge and MCAP recording |
 
 ## Robot configuration
 

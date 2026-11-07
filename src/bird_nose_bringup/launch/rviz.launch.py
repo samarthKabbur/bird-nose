@@ -34,9 +34,11 @@ def _launch_rviz(context):
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('robot_yaml', default_value=default_robot_yaml()),
+        DeclareLaunchArgument('robot_yaml', default_value=default_robot_yaml(),
+                              description='robot.yaml to read the robot namespace from'),
         DeclareLaunchArgument('namespace', default_value='',
-                              description='Defaults to the namespace in robot.yaml'),
-        DeclareLaunchArgument('use_sim_time', default_value='true'),
+                              description='Robot namespace; empty reads robot.yaml'),
+        DeclareLaunchArgument('use_sim_time', default_value='true',
+                              description='Use the /clock topic instead of wall time'),
         OpaqueFunction(function=_launch_rviz),
     ])

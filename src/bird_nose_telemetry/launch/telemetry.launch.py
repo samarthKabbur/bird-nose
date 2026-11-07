@@ -19,8 +19,10 @@ def generate_launch_description():
     bridge = os.path.join(get_package_share_directory('foxglove_bridge'), 'launch',
                           'foxglove_bridge_launch.xml')
     return LaunchDescription([
-        DeclareLaunchArgument('address', default_value='127.0.0.1'),
-        DeclareLaunchArgument('port', default_value='8765'),
+        DeclareLaunchArgument('address', default_value='127.0.0.1',
+                              description='Listen address; keep 127.0.0.1, use SSH'),
+        DeclareLaunchArgument('port', default_value='8765',
+                              description='WebSocket port for Foxglove'),
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(bridge),
             launch_arguments={
