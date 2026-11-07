@@ -3,7 +3,7 @@
 <package format="3">
   <name>bird_nose_navigation</name>
   <version>0.0.1</version>
-  <description>Bird Nose Nav2 parameters, maps, and behavior trees.</description>
+  <description>Nav2 parameters, maps, and behavior trees tuned for Bird Nose. Starts from Clearpath's Nav2 demo configuration in Phase 2.</description>
   <maintainer email="samarthKabbur@users.noreply.github.com">Samarth Kabbur</maintainer>
   <license>TODO</license>
 

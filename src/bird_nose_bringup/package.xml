@@ -3,7 +3,7 @@
 <package format="3">
   <name>bird_nose_bringup</name>
   <version>0.0.1</version>
-  <description>Launch entry points for the Bird Nose robot in simulation (and later on hardware).</description>
+  <description>Launch entry points for Bird Nose: the simulated Husky A200 in Gazebo Harmonic, Nav2 with SLAM, and RViz. Hardware bringup is added in Phase 5.</description>
   <maintainer email="samarthKabbur@users.noreply.github.com">Samarth Kabbur</maintainer>
   <license>TODO</license>
 

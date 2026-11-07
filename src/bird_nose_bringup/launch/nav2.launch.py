@@ -40,11 +40,13 @@ def _launch_nav(context):
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('setup_path', default_value=default_setup_path()),
-        DeclareLaunchArgument('use_sim_time', default_value='true'),
+        DeclareLaunchArgument('setup_path', default_value=default_setup_path(),
+                              description='Folder sim.launch.py writes generated files to'),
+        DeclareLaunchArgument('use_sim_time', default_value='true',
+                              description='Use the /clock topic instead of wall time'),
         DeclareLaunchArgument('slam', default_value='true',
-                              description='Build a map while navigating'),
+                              description='Build a map with SLAM while navigating'),
         DeclareLaunchArgument('scan_topic', default_value='',
-                              description='Override the laser scan topic'),
+                              description='Scan topic for Nav2; empty keeps the default'),
         OpaqueFunction(function=_launch_nav),
     ])

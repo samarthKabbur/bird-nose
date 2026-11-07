@@ -17,7 +17,7 @@ setup(
     zip_safe=True,
     maintainer='Samarth Kabbur',
     maintainer_email='samarthKabbur@users.noreply.github.com',
-    description='Bird Nose autonomy nodes.',
+    description='Bird Nose autonomy nodes (heartbeat placeholder until Phase 4).',
     license='TODO',
     tests_require=['pytest'],
     entry_points={

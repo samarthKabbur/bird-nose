@@ -7,7 +7,8 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('use_sim_time', default_value='true'),
+        DeclareLaunchArgument('use_sim_time', default_value='true',
+                              description='Use the /clock topic instead of wall time'),
         Node(
             package='bird_nose_algorithms',
             executable='status_node',

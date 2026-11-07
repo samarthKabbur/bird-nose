@@ -3,7 +3,7 @@
 <package format="3">
   <name>bird_nose_telemetry</name>
   <version>0.0.1</version>
-  <description>Foxglove Bridge and MCAP recording for Bird Nose.</description>
+  <description>Live telemetry for Bird Nose: Foxglove Bridge on localhost (reached by SSH tunnel), and MCAP recording support.</description>
   <maintainer email="samarthKabbur@users.noreply.github.com">Samarth Kabbur</maintainer>
   <license>TODO</license>
 
