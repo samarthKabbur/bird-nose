@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# Record a run to MCAP and save what produced it next to the recording.
+#
+# Usage (inside the dev container):
+#   ros2 run bird_nose_telemetry record_run <short-name> [topic ...]
+#
+#   <short-name>  what this run tests, e.g. first-sim-nav2 (letters, digits, - and _)
+#   [topic ...]   topics to record; default is every topic
+#
+# Optional environment variables:
+#   SCENARIO   scenario name (default: none)
+#   SEED       random seed (default: none)
+#   NOTES      operator notes (default: asked for at the end)
+#
+# Output: $BIRD_NOSE_WS/data/bags/<date>_<time>_<short-name>/
+#   *.mcap               the recording
+#   metadata.yaml        written by ros2 bag
+#   run_metadata.yaml    commit, base image, robot config, ROS settings, outcome
+#
+# Stop recording with Ctrl+C; the script then asks for the outcome.
+set -Eeuo pipefail
+
+WS="${BIRD_NOSE_WS:-/workspaces/bird-nose}"
+name="${1:-}"
+if [[ ! "${name}" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "Usage: ros2 run bird_nose_telemetry record_run <short-name> [topic ...]" >&2
+  echo "       <short-name> uses only letters, digits, - and _" >&2
+  exit 1
+fi
+shift
+topics=("$@")
+
+out_dir="${WS}/data/bags/$(date +%F_%H%M%S)_${name}"
+mkdir -p "${WS}/data/bags"
+
+git_commit="$(git -C "${WS}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+git_dirty="$(git -C "${WS}" status --porcelain 2>/dev/null | grep -q . && echo true || echo false)"
+git_branch="$(git -C "${WS}" branch --show-current 2>/dev/null || echo unknown)"
+base_image="$(grep -m1 '^ARG BASE_IMAGE=' "${WS}/containers/Dockerfile" | cut -d= -f2- || echo unknown)"
+robot_yaml="${WS}/config/robots/husky-a200/robot.yaml"
+robot_sha="$(sha256sum "${robot_yaml}" 2>/dev/null | cut -c1-12 || echo unknown)"
+# Tuned Nav2 parameters live in bird_nose_navigation/config; until any exist,
+# runs use Clearpath's demo defaults.
+nav2_dir="${WS}/src/bird_nose_navigation/config"
+if find "${nav2_dir}" -type f ! -name .gitkeep 2>/dev/null | grep -q .; then
+  nav2_rev="$(git -C "${WS}" log -1 --format=%h -- src/bird_nose_navigation/config 2>/dev/null || echo unknown)"
+else
+  nav2_rev="clearpath-defaults"
+fi
+started="$(date --iso-8601=seconds)"
+
+echo "Recording to ${out_dir}"
+echo "Commit ${git_commit} (${git_branch}, uncommitted changes: ${git_dirty}). Press Ctrl+C to stop."
+
+# Ctrl+C should stop ros2 bag, not this script, so the metadata still gets written.
+trap ':' INT
+if (( ${#topics[@]} )); then
+  ros2 bag record -s mcap -o "${out_dir}" "${topics[@]}" || true
+else
+  ros2 bag record -s mcap -o "${out_dir}" --all || true
+fi
+trap - INT
+
+if [[ ! -d "${out_dir}" ]]; then
+  echo "No recording was created." >&2
+  exit 1
+fi
+
+notes="${NOTES:-}"
+if [[ -z "${notes}" && -t 0 ]]; then
+  read -r -p "Operator notes (one line): " notes || true
+fi
+outcome=""
+if [[ -t 0 ]]; then
+  read -r -p "Outcome [pass/fail/unknown]: " outcome || true
+fi
+
+# yaml_str: quote a value for YAML (single quotes, doubled inside).
+yaml_str() { printf "'%s'" "${1//\'/\'\'}"; }
+
+cat > "${out_dir}/run_metadata.yaml" <<EOF
+run: $(yaml_str "${name}")
+started: $(yaml_str "${started}")
+ended: $(yaml_str "$(date --iso-8601=seconds)")
+git:
+  commit: $(yaml_str "${git_commit}")
+  branch: $(yaml_str "${git_branch}")
+  uncommitted_changes: ${git_dirty}
+base_image: $(yaml_str "${base_image}")
+robot_yaml:
+  path: config/robots/husky-a200/robot.yaml
+  sha256_prefix: $(yaml_str "${robot_sha}")
+nav2_config_revision: $(yaml_str "${nav2_rev}")
+ros:
+  domain_id: $(yaml_str "${ROS_DOMAIN_ID:-unset}")
+  rmw: $(yaml_str "${RMW_IMPLEMENTATION:-unset}")
+scenario: $(yaml_str "${SCENARIO:-none}")
+seed: $(yaml_str "${SEED:-none}")
+operator_notes: $(yaml_str "${notes}")
+outcome: $(yaml_str "${outcome:-unknown}")
+EOF
+
+echo "Saved ${out_dir}"
+ls -lh "${out_dir}"
