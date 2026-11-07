@@ -4,6 +4,8 @@ project(bird_nose_telemetry)
 find_package(ament_cmake REQUIRED)
 
 install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/launch)
+# Installed to lib/ so it runs with: ros2 run bird_nose_telemetry record_run
+install(PROGRAMS scripts/record_run DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

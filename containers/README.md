@@ -36,10 +36,12 @@ docker compose -f containers/compose.yaml down               # stop everything
 | --- | --- | --- | --- |
 | `dev` | default | `sleep infinity` | Interactive shell; the only service built by `tools/dev.sh` |
 | `sim` | `sim` | `ros2 launch bird_nose_bringup sim.launch.py` | Gazebo window needs a display |
-| `nav2` | `sim` | `ros2 launch bird_nose_bringup nav2.launch.py` | Starts after `sim`; reads the shared setup folder |
-| `algorithm` | `sim` | `ros2 launch bird_nose_algorithms algorithms.launch.py` | Heartbeat node for now |
-| `rviz` | `sim`, `operator` | `ros2 launch bird_nose_bringup rviz.launch.py` | Needs a display |
+| `nav2` | `sim` | `ros2 launch bird_nose_bringup nav2.launch.py` | Waits for `sim` to be healthy; reads the shared setup folder |
+| `algorithm` | `sim` | `ros2 launch bird_nose_algorithms algorithms.launch.py` | Waits for `sim` to be healthy; heartbeat node for now |
+| `rviz` | `sim`, `operator` | `ros2 launch bird_nose_bringup rviz.launch.py` | Needs a display; waits for `sim` when started together |
 | `telemetry` | `telemetry`, `operator` | `ros2 launch bird_nose_telemetry telemetry.launch.py` | Foxglove Bridge on `127.0.0.1:8765` |
+
+`sim` reports healthy once Gazebo's `/clock` is ticking and the robot's `platform/odom/filtered` topic exists, which is the same check Clearpath's own simulation image uses. It allows 120 s for start-up, then checks every 10 s. `docker compose -f containers/compose.yaml ps` shows each service's health.
 
 Shared by every service:
 
@@ -48,6 +50,7 @@ Shared by every service:
 - Volume `bird-nose-history`: shell history that survives container restarts.
 - Volume `bird-nose-sim-setup`, mounted at `~/.bird_nose`: Clearpath's generated simulation files, shared by `sim`, `nav2`, and `rviz`.
 - The X11 socket, for Gazebo and RViz windows.
+- GPU access through Mesa (Intel or AMD graphics): `/dev/dri` is mounted, a cgroup rule allows DRM devices (major number 226), and the container user joins the host's `video` and `render` groups. Without this, Mesa reports "Failed to query drm device" and RViz may fail to start. NVIDIA graphics use `compose.nvidia.yaml` instead.
 
 ## Configuration
 
@@ -61,6 +64,9 @@ Shared by every service:
 | `RMW_IMPLEMENTATION` | `rmw_fastrtps_cpp` | Fast DDS, the same middleware as the robot |
 | `ROS_AUTOMATIC_DISCOVERY_RANGE` | `LOCALHOST` | Keeps simulation traffic on this computer |
 | `DISPLAY` | `:0` | X display for GUI windows |
+| `VIDEO_GID`, `RENDER_GID` | your machine's | Host group IDs that own `/dev/dri`; they differ between installs, so `setup_env.sh` looks them up |
+
+`tools/setup_env.sh` never changes values in an existing `.env`, but it adds any setting that `.env.example` gained since, so every machine picks up new settings by running `./tools/dev.sh`.
 
 To change the base image, update the digest in `Dockerfile` in its own pull request and note why.
 
@@ -71,7 +77,6 @@ To change the base image, update the digest in `Dockerfile` in its own pull requ
 ## Limitations
 
 - GUI forwarding assumes X11 or XWayland on an Ubuntu desktop. macOS and Windows hosts are not supported for running ROS.
-- `nav2` may start before the simulation has finished generating files; Phase 2 adds proper start-up ordering.
 - The first image build downloads several GB.
 
 ## See also

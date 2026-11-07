@@ -9,7 +9,7 @@ Helper scripts that run on the host computer (outside containers) to set up and 
 | Path | What it does |
 | --- | --- |
 | `dev.sh` | One-command development environment: creates `containers/.env`, allows GUI windows, builds the image if needed, starts `dev`, and opens a shell |
-| `setup_env.sh` | Creates `containers/.env` from `containers/.env.example` with your user and group IDs. Never overwrites an existing `.env`. Refuses to run as root. |
+| `setup_env.sh` | Creates `containers/.env` from `containers/.env.example` with your user and group IDs and the IDs of the host's `video` and `render` groups. On later runs it never changes existing values; it only adds settings that `.env.example` gained since. Refuses to run as root. |
 | [`robot/`](robot/README.md) | Robot container scripts from Nuvo, preserved unchanged for Phase 5 |
 
 ## Usage
