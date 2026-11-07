@@ -16,6 +16,10 @@ on:
       goal_y:
         description: Goal y in the map frame, metres
         default: "0.0"
+      gpu:
+        description: Use the NVIDIA GPU (compose.nvidia.yaml; needs the NVIDIA Container Toolkit)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -35,6 +39,10 @@ jobs:
       # not collide with a developer's containers on the same computer.
       # Domain 43 with localhost discovery: never the robot's domain 0.
       COMPOSE_PROJECT_NAME: bird-nose-ci
+      # Compose reads its files from here; the NVIDIA overlay is added when
+      # the gpu input is on. Windowless Gazebo needs a GPU whose driver is in
+      # the container (see tools/ci/README.md, Limitations).
+      COMPOSE_FILE: ${{ inputs.gpu && 'containers/compose.yaml:containers/compose.nvidia.yaml' || 'containers/compose.yaml' }}
       BIRD_NOSE_IMAGE: bird-nose-ci:jazzy
       ROS_DOMAIN_ID: "43"
       ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
@@ -47,14 +55,14 @@ jobs:
         run: ./tools/setup_env.sh
 
       - name: Build the image
-        run: docker compose -f containers/compose.yaml build dev
+        run: docker compose build dev
 
       - name: Run the smoke test
         env:
           GOAL_X: ${{ inputs.goal_x }}
           GOAL_Y: ${{ inputs.goal_y }}
         run: |
-          docker compose -f containers/compose.yaml run --rm --no-deps -T \
+          docker compose run --rm --no-deps -T \
             -e GOAL_X -e GOAL_Y dev tools/ci/sim_smoke.sh
 
       - name: Summary
@@ -72,4 +80,4 @@ jobs:
 
       - name: Remove containers and volumes
         if: ${{ always() }}
-        run: docker compose -f containers/compose.yaml down --volumes --remove-orphans
+        run: docker compose down --volumes --remove-orphans

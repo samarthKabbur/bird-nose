@@ -21,6 +21,7 @@ python3 tools/ci/check_docs.py      # on the host or in the container
 # In a ./tools/dev.sh shell. Stop any simulation you already have running first.
 tools/ci/sim_smoke.sh
 GOAL_X=2.0 GOAL_Y=0.5 tools/ci/sim_smoke.sh
+SIM_HEADLESS=false tools/ci/sim_smoke.sh     # show the Gazebo window
 ```
 
 `check_docs.py` checks:
@@ -45,6 +46,7 @@ A module folder is any top-level folder, any folder directly under `config/` or 
 | `GOAL_X`, `GOAL_Y` | `1.0`, `0.0` | Goal in the `map` frame, metres, relative to where SLAM starts (the spawn point) |
 | `SIM_TIMEOUT_S` | `300` | Seconds to wait for `/clock` and the robot's odometry |
 | `NAV2_TIMEOUT_S` | `240` | Seconds to wait for Nav2's `bt_navigator` to become active and SLAM to publish a map |
+| `SIM_HEADLESS` | `true` | `false` opens the Gazebo window, which renders through the desktop like a normal simulation |
 | `GOAL_TIMEOUT_S` | `180` | Seconds allowed to reach the goal |
 | `ROBOT_YAML` | `config/robots/husky-a200/robot.yaml` | Robot to simulate; the namespace is read from it |
 
@@ -56,7 +58,7 @@ It refuses to run when `ROS_DOMAIN_ID` is `0` or unset, or when `ROS_AUTOMATIC_D
 
 ## Limitations
 
-- `sim_smoke.sh` has not yet been run end to end: it needs Gazebo, so it waits for a self-hosted runner or a manual run in a dev container. Rendering the Ouster's simulated scan without a window still needs graphics; a computer with `/dev/dri` (Intel or AMD graphics) or an NVIDIA GPU is expected to work, and CPU-only rendering is untested.
+- Without a window, Gazebo still renders the Ouster's simulated scan, but it picks the first graphics card it finds rather than the one your desktop uses. On a laptop with both Intel and NVIDIA graphics, such as `hero`, it picks the NVIDIA card. Without the NVIDIA driver in the container, Gazebo then crashes with "Failed to create dummy render window", and the script prints a hint. Fixes: start the container with `GPU=1 ./tools/dev.sh` (needs the NVIDIA Container Toolkit on the host), or run with `SIM_HEADLESS=false` on a desktop. Computers with only Intel or AMD graphics are not affected.
 - It runs in the same container as everything else, so a simulation you already have running on the same ROS domain would interfere. The self-hosted workflow avoids this with domain 43.
 
 ## See also

@@ -8,6 +8,7 @@
 #
 #   tools/ci/sim_smoke.sh                 # goal 1.0 m ahead of the spawn point
 #   GOAL_X=2.0 GOAL_Y=0.5 tools/ci/sim_smoke.sh
+#   SIM_HEADLESS=false tools/ci/sim_smoke.sh   # with the Gazebo window
 #
 # Logs and a short report go to data/reports/sim_smoke/<UTC time>/, which
 # Git ignores.
@@ -18,6 +19,7 @@ set -euo pipefail
 
 GOAL_X="${GOAL_X:-1.0}"
 GOAL_Y="${GOAL_Y:-0.0}"
+SIM_HEADLESS="${SIM_HEADLESS:-true}"
 SIM_TIMEOUT_S="${SIM_TIMEOUT_S:-300}"
 NAV2_TIMEOUT_S="${NAV2_TIMEOUT_S:-240}"
 GOAL_TIMEOUT_S="${GOAL_TIMEOUT_S:-180}"
@@ -46,6 +48,7 @@ mkdir -p "$OUT"
   echo "- Commit: $(git -C "$WS" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   echo "- ROS domain: $ROS_DOMAIN_ID, discovery: $ROS_AUTOMATIC_DISCOVERY_RANGE"
   echo "- Goal: x=$GOAL_X m, y=$GOAL_Y m in the map frame"
+  echo "- Gazebo headless: $SIM_HEADLESS"
 } > "$OUT/report.md"
 
 # Stop everything this script started, whatever happens.
@@ -66,6 +69,14 @@ show_log() {
   grep -nE 'ERROR|\[Err\]|died|exception|Traceback|EGL|[Rr]endering' "$file" | head -n 30 || true
   echo "----- last 40 lines of ${file#"$WS"/} -----"
   tail -n 40 "$file"
+  # Known cause: an NVIDIA card (PCI vendor 10de) is visible in /dev/dri but
+  # its driver is not in the container, and windowless rendering picked it.
+  if grep -q 'Failed to create dummy render window' "$file" &&
+     grep -q 'pci id for fd [0-9]*: 10de' "$file"; then
+    echo "HINT: Gazebo tried to render on the NVIDIA GPU, whose driver is not in this"
+    echo "      container. Start the container with GPU=1 (NVIDIA Container Toolkit),"
+    echo "      or run with SIM_HEADLESS=false on a desktop. See tools/ci/README.md."
+  fi
 }
 
 # Wait until a command succeeds, retrying every 5 s. Fails early if the launch
@@ -108,7 +119,7 @@ log "robot namespace: $NS"
 
 # --- Simulation ---------------------------------------------------------------
 # setsid gives each launch its own process group, so cleanup stops all of it.
-setsid ros2 launch bird_nose_bringup sim.launch.py headless:=true robot_yaml:="$ROBOT_YAML" \
+setsid ros2 launch bird_nose_bringup sim.launch.py headless:="$SIM_HEADLESS" robot_yaml:="$ROBOT_YAML" \
   > "$OUT/sim.log" 2>&1 &
 PIDS+=($!)
 

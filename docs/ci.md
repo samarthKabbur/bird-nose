@@ -84,7 +84,7 @@ The simulation test needs Gazebo and graphics, which hosted runners do not provi
 3. When `config.sh` asks for labels, add `bird-nose-sim`. The runner adds `self-hosted`, `Linux`, and `X64` itself.
 4. Start it with `./run.sh`, then run **Actions → Simulation smoke test (self-hosted) → Run workflow**. Stop it with Ctrl+C when done.
 
-GUI windows are not needed: the test runs Gazebo without a window.
+GUI windows are not needed: the test runs Gazebo without a window. It still renders the Ouster's simulated scan on a graphics card, so on a computer with an NVIDIA GPU, such as `hero`, install the NVIDIA Container Toolkit for the runner and leave the workflow's **gpu** option on. On a computer with only Intel or AMD graphics, turn **gpu** off. The reason is under Limitations in [tools/ci](../tools/ci/README.md#limitations).
 
 ## Who updates what
 
