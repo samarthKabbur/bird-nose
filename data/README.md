@@ -19,10 +19,10 @@ Each folder contains only a `.gitkeep` placeholder in Git. `.gitignore` excludes
 Record a run from the dev container (the repository is mounted, so files appear here on the host too):
 
 ```bash
-ros2 bag record -s mcap -o data/bags/$(date +%F_%H%M)_<what-you-tested> <topics...>
+ros2 run bird_nose_telemetry record_run <what-you-tested> [topics...]
 ```
 
-Every important run should note: Git commit or tag, image digest, robot configuration, scenario and seed, Nav2 parameter revision, start time and operator notes, and pass or fail.
+It names the folder `<date>_<time>_<name>` and writes `run_metadata.yaml` beside the recording: Git commit, image digest, robot configuration, scenario and seed, Nav2 parameter revision, times, operator notes, and pass or fail. See [bird_nose_telemetry](../src/bird_nose_telemetry/README.md).
 
 ## Limitations
 

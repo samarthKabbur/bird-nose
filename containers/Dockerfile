@@ -76,6 +76,11 @@ RUN apt-get update && apt-get install -y \
 ARG USERNAME=dev
 ARG USER_UID=1000
 ARG USER_GID=1000
+# Host group IDs that own /dev/dri. Giving them names inside the image only
+# avoids "groups: cannot find name for group ID" in shells; access itself
+# comes from group_add in compose.yaml.
+ARG VIDEO_GID=44
+ARG RENDER_GID=993
 
 # Ubuntu 24.04 images ship a default "ubuntu" user with UID 1000, which
 # would collide with most host users; remove it before creating ours.
@@ -92,6 +97,13 @@ RUN (userdel -r ubuntu 2>/dev/null || true) \
  && chown -R "${USER_UID}:${USER_GID}" /commandhistory \
  && echo "export PROMPT_COMMAND='history -a'; export HISTFILE=/commandhistory/.bash_history" \
       >> "/home/${USERNAME}/.bashrc"
+
+RUN for pair in "video:${VIDEO_GID}" "render:${RENDER_GID}"; do \
+      name="${pair%%:*}"; gid="${pair##*:}"; \
+      getent group "${gid}" >/dev/null && continue; \
+      getent group "${name}" >/dev/null && name="host-${name}"; \
+      groupadd --gid "${gid}" "${name}"; \
+    done
 
 # rosdep keeps its cache per user; initialise it once for the image.
 RUN rosdep init 2>/dev/null || true

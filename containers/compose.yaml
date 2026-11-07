@@ -31,6 +31,8 @@ x-ros-common: &ros-common
       USERNAME: ${CONTAINER_USER:-dev}
       USER_UID: ${HOST_UID:-1000}
       USER_GID: ${HOST_GID:-1000}
+      VIDEO_GID: ${VIDEO_GID:-44}
+      RENDER_GID: ${RENDER_GID:-993}
   network_mode: host
   ipc: host
   environment:
@@ -41,9 +43,20 @@ x-ros-common: &ros-common
     BIRD_NOSE_SIM_SETUP: /home/${CONTAINER_USER:-dev}/.bird_nose/sim_setup/
     DISPLAY: ${DISPLAY:-:0}
     QT_X11_NO_MITSHM: "1"
+    XDG_RUNTIME_DIR: /tmp/runtime-${CONTAINER_USER:-dev}
+  # GPU access for Gazebo and RViz through Mesa (Intel or AMD graphics):
+  # /dev/dri is mounted, the cgroup rule allows DRM devices (major 226), and
+  # the user joins the host's video and render groups that own those devices.
+  # On a machine without /dev/dri, Mesa falls back to CPU rendering.
+  device_cgroup_rules:
+    - "c 226:* rmw"
+  group_add:
+    - "${VIDEO_GID:-44}"
+    - "${RENDER_GID:-993}"
   volumes:
     - ..:/workspaces/bird-nose
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - /dev/dri:/dev/dri
     - bird-nose-history:/commandhistory
     # Shared by sim, nav2, and rviz: Clearpath's generators write launch and
     # parameter files here, and Nav2 reads them.
@@ -65,13 +78,31 @@ services:
     container_name: bird-nose-sim
     profiles: ["sim"]
     command: ["ros2", "launch", "bird_nose_bringup", "sim.launch.py"]
+    # Healthy once Gazebo's clock is ticking and the robot's odometry exists
+    # (the same check Clearpath's own simulation image uses). Services that
+    # need the simulation wait for this instead of racing it.
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          source /opt/ros/jazzy/setup.bash &&
+          timeout 8 ros2 topic echo /clock --once > /dev/null 2>&1 &&
+          ros2 topic list --no-daemon 2>/dev/null | grep -qE '/[^/]+/platform/odom/filtered$'
+      interval: 10s
+      timeout: 15s
+      start_period: 120s
+      retries: 24
 
-  # Nav2 with SLAM against the simulated robot (finalized in Phase 2).
+  # Nav2 with SLAM against the simulated robot.
   nav2:
     <<: *ros-common
     container_name: bird-nose-nav2
     profiles: ["sim"]
-    depends_on: [sim]
+    depends_on:
+      sim:
+        condition: service_healthy
     command: ["ros2", "launch", "bird_nose_bringup", "nav2.launch.py"]
 
   # Bird Nose autonomy nodes.
@@ -79,7 +110,9 @@ services:
     <<: *ros-common
     container_name: bird-nose-algorithm
     profiles: ["sim"]
-    depends_on: [sim]
+    depends_on:
+      sim:
+        condition: service_healthy
     command: ["ros2", "launch", "bird_nose_algorithms", "algorithms.launch.py"]
 
   # Engineering visualization (Ubuntu desktop only).
@@ -87,6 +120,11 @@ services:
     <<: *ros-common
     container_name: bird-nose-rviz
     profiles: ["sim", "operator"]
+    # Waits for the simulation only when both are started together.
+    depends_on:
+      sim:
+        condition: service_healthy
+        required: false
     command: ["ros2", "launch", "bird_nose_bringup", "rviz.launch.py"]
 
   # Foxglove Bridge for dashboards and recording review. Listens on
