@@ -31,7 +31,7 @@ Run these as your normal user, not with `sudo`. The container user is created wi
 
 ## Limitations
 
-Linux hosts only: `xhost` and host networking assume Ubuntu with X11 or XWayland.
+Ubuntu 24.04, or Windows with WSL2 running Ubuntu 24.04, only. `xhost` and host networking need a Linux environment with X11, XWayland, or WSLg. On WSL2, `xhost` may not be installed; `dev.sh` skips it, and WSLg usually allows the windows anyway.
 
 ## See also
 
