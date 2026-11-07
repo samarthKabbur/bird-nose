@@ -4,11 +4,16 @@ ROS 2 software for Bird Nose, a Clearpath Husky A200 that identifies birds by so
 
 Everything ROS-related runs in Docker containers: ROS 2 Jazzy, Gazebo Harmonic, Nav2, and Clearpath's Jazzy packages. A computer needs only Docker and Git, so every machine runs the same environment.
 
-The plan, decisions, and lab findings live in the team's living architecture doc; this README covers how to use the repository. For how the pieces fit together, start with [docs/architecture.md](docs/architecture.md); unfamiliar terms are in [docs/glossary.md](docs/glossary.md). Every folder below has its own README.
+The plan, decisions, and lab findings live in the team's living architecture doc; this README covers how to use the repository. For how the pieces fit together, start with [docs/architecture.md](docs/architecture.md); unfamiliar terms are in [docs/glossary.md](docs/glossary.md). Every module has its own README, listed in the [repository map](#repository-map).
 
-## Quick start (Ubuntu workstation)
+## Quick start
 
-Requirements: Docker Engine with the Compose plugin, Git, and a desktop session for Gazebo and RViz windows.
+Supported development hosts:
+
+- **Ubuntu 24.04** desktop or laptop.
+- **Windows with WSL2** running Ubuntu 24.04. Install Docker Engine inside the Ubuntu distribution and run every command below from its terminal. WSL2's built-in display support (WSLg) shows Gazebo and RViz windows on the Windows desktop.
+
+Requirements on either: Docker Engine with the Compose plugin, and Git. Nothing ROS-related is installed on the host. If Docker says "permission denied", add yourself to the `docker` group (`sudo usermod -aG docker $USER`), then log out and back in.
 
 ```bash
 git clone https://github.com/samarthKabbur/bird-nose.git
@@ -82,14 +87,28 @@ bird-nose/
 └── dependencies.repos      extra source repositories for vcs import
 ```
 
-| Package | Purpose |
-| --- | --- |
-| [`bird_nose_bringup`](src/bird_nose_bringup/README.md) | Launch entry points: simulation, Nav2, RViz |
-| [`bird_nose_description`](src/bird_nose_description/README.md) | Bird Nose payloads (microphone modules, crossbar) |
-| [`bird_nose_navigation`](src/bird_nose_navigation/README.md) | Nav2 parameters, maps, behavior trees |
-| [`bird_nose_sim`](src/bird_nose_sim/README.md) | Gazebo worlds and scenario assets |
-| [`bird_nose_algorithms`](src/bird_nose_algorithms/README.md) | Bird Nose autonomy nodes |
-| [`bird_nose_telemetry`](src/bird_nose_telemetry/README.md) | Foxglove Bridge and MCAP recording |
+### Repository map
+
+Every module has a README with the same sections: Purpose, Contents, Usage, Interfaces, Configuration, Testing, Limitations, See also.
+
+| Path | Role | Docs |
+| --- | --- | --- |
+| `.devcontainer/` | VS Code dev container, using the `dev` service | [README](.devcontainer/README.md) |
+| `containers/` | Docker image, Compose services, overlays, `.env.example` | [README](containers/README.md) |
+| `config/` | Robot, host roles, and scenarios | [README](config/README.md) |
+| `config/robots/` | Clearpath `robot.yaml` for the Husky A200 | [README](config/robots/README.md) |
+| `config/hosts/` | Settings for each computer role | [README](config/hosts/README.md) |
+| `config/scenarios/` | Simulation scenario definitions (Phase 4) | [README](config/scenarios/README.md) |
+| `src/bird_nose_bringup` | Launch entry points: simulation, Nav2, RViz | [README](src/bird_nose_bringup/README.md) |
+| `src/bird_nose_description` | Bird Nose payloads (microphone modules, crossbar) in the robot model | [README](src/bird_nose_description/README.md) |
+| `src/bird_nose_navigation` | Nav2 parameters, maps, behavior trees | [README](src/bird_nose_navigation/README.md) |
+| `src/bird_nose_sim` | Gazebo worlds and scenario assets | [README](src/bird_nose_sim/README.md) |
+| `src/bird_nose_algorithms` | Bird Nose autonomy nodes | [README](src/bird_nose_algorithms/README.md) |
+| `src/bird_nose_telemetry` | Foxglove Bridge and MCAP recording | [README](src/bird_nose_telemetry/README.md) |
+| `tools/` | Host scripts: `dev.sh`, `setup_env.sh` | [README](tools/README.md) |
+| `tools/robot/` | Robot container scripts, wired up in Phase 5 | [README](tools/robot/README.md) |
+| `data/` | Local recordings, logs, and reports | [README](data/README.md) |
+| `docs/` | Architecture diagrams and glossary | [architecture](docs/architecture.md), [glossary](docs/glossary.md) |
 
 ## Robot configuration
 

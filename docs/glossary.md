@@ -34,4 +34,5 @@ Terms used across the Bird Nose repository, in alphabetical order.
 | **TF** | ROS's transform system, which publishes how frames relate (topics `tf` and `tf_static`). |
 | **udev rule** | A host rule that gives a device a stable name, such as `/dev/microstrain_rtk`. Rules run on the host, never in containers. |
 | **Volume** | Storage Docker keeps outside a container so it survives restarts, such as `bird-nose-sim-setup`. |
+| **WSL2 / WSLg** | Windows Subsystem for Linux: runs a real Ubuntu inside Windows. WSLg is its built-in display support, which shows Linux GUI windows such as Gazebo and RViz on the Windows desktop. A supported development host for Bird Nose. |
 | **Workspace overlay** | Sourcing `install/setup.bash` on top of `/opt/ros/jazzy`, so our packages are found alongside the system's. Not the same as a Compose overlay. |

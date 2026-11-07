@@ -76,7 +76,7 @@ To change the base image, update the digest in `Dockerfile` in its own pull requ
 
 ## Limitations
 
-- GUI forwarding assumes X11 or XWayland on an Ubuntu desktop. macOS and Windows hosts are not supported for running ROS.
+- GUI forwarding assumes X11 or XWayland: an Ubuntu 24.04 desktop, or WSL2's built-in display support (WSLg) on Windows. A clean rebuild on WSL2 with Ubuntu 24.04 was verified on 2026-11-07. macOS is not supported for running ROS.
 - The first image build downloads several GB.
 
 ## See also

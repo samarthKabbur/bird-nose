@@ -28,7 +28,7 @@ flowchart LR
 
 - **Nuvo** runs Clearpath's robot stack: base driver, IMU, joystick teleop, and (for now) the Ouster driver. Its software bridge `br131` acts as a switch for the robot network.
 - **bender** runs Bird Nose's heavier work: audio, and later any GPU processing. Because `br131` is a switch, bender can receive the Ouster's data directly even though the cable plugs into Nuvo. Which computer runs each sensor driver is settled in Phase 5.
-- **The laptop** is where code is written, built, and simulated, and where an operator watches the robot.
+- **The laptop** is where code is written, built, and simulated, and where an operator watches the robot. Any Ubuntu 24.04 machine, or Windows with WSL2 running Ubuntu 24.04, can take this role: the containers are identical on both.
 - **The MacBook** never runs ROS; it views telemetry through Foxglove.
 
 ## Containers on each computer
@@ -84,19 +84,6 @@ flowchart LR
 
 The simulator and the robot read the same file, so they publish the same topic names under the same namespace (`/Nuvo_7100VTC_Series`). Code written against the simulation runs against the robot unchanged. The file is copied in both cases because Clearpath's generators write their output next to it.
 
-## Repository map
+## Where things live
 
-| Path | Role | Docs |
-| --- | --- | --- |
-| `containers/` | Image and services | [README](../containers/README.md) |
-| `config/` | Robot, host roles, scenarios | [README](../config/README.md) |
-| `src/bird_nose_bringup` | Launch entry points | [README](../src/bird_nose_bringup/README.md) |
-| `src/bird_nose_description` | Bird Nose payloads in the robot model | [README](../src/bird_nose_description/README.md) |
-| `src/bird_nose_navigation` | Nav2 configuration | [README](../src/bird_nose_navigation/README.md) |
-| `src/bird_nose_sim` | Worlds and assets | [README](../src/bird_nose_sim/README.md) |
-| `src/bird_nose_algorithms` | Autonomy nodes | [README](../src/bird_nose_algorithms/README.md) |
-| `src/bird_nose_telemetry` | Foxglove and recording | [README](../src/bird_nose_telemetry/README.md) |
-| `tools/` | Host scripts and robot scripts | [README](../tools/README.md) |
-| `data/` | Local recordings and reports | [README](../data/README.md) |
-
-New terms are defined in the [glossary](glossary.md).
+The repository map, with a link to every module's README, is in the [top-level README](../README.md#repository-map). New terms are defined in the [glossary](glossary.md).
