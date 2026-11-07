@@ -1,0 +1,139 @@
+# Clearpath robot configuration for Bird Nose's Husky A200 (serial a200-0539).
+#
+# Source: /etc/clearpath/robot.yaml on Nuvo, exported 2026-11-06. That file
+# has already driven the robot through Clearpath's Jazzy robot container.
+# Changes from it are marked "CHANGED" below; everything else is as found.
+#
+# This file is used directly for simulation. For the physical robot it is
+# copied to /etc/clearpath/robot.yaml on Nuvo (Phase 5), never mounted from
+# the repository, because Clearpath's generators write files next to it.
+#
+# Open items (see the living doc): exact sensor offsets are not measured yet,
+# the GNSS receiver is unconfirmed, and the microphone array is described by
+# bird_nose_description rather than here.
+
+serial_number: a200-0539
+version: 0
+system:
+  username: robot
+  hosts:
+    - self: Nuvo-7100VTC-Series
+      platform:
+        Nuvo-7100VTC-Series: 192.168.131.1
+      onboard: {}
+      remote: {}
+  ros2:
+    # Kept as is (decided 2026-11-06); tools/robot scripts assume it.
+    namespace: Nuvo_7100VTC_Series
+    # Hardware runs on domain 0. Simulation and development use 42, set by
+    # containers/.env rather than this file.
+    domain_id: 0
+    rmw_implementation: rmw_fastrtps_cpp
+    workspaces: []
+platform:
+  controller: logitech
+  battery:
+    model: ES20_12C
+    configuration: S2P1
+  attachments:
+    - name: front_bumper
+      type: bumper
+      parent: front_bumper_mount
+    - name: rear_bumper
+      type: bumper
+      parent: rear_bumper_mount
+    - name: top_plate
+      type: top_plate
+      model: pacs
+    # TO VERIFY: the photos show a custom aluminium crossbar holding the
+    # Ouster rather than Clearpath's sensor arch. Kept until checked.
+    - name: sensor_arch
+      type: sensor_arch
+      parent: default_mount
+      model: sensor_arch_300
+      enabled: true
+  extras:
+    urdf: null
+    ros_parameters:
+      platform_velocity_controller:
+        # CHANGED: the exported file had a stray quote at the end of each key
+        # (e.g. linear.x.max_velocity"), so Clearpath's parser passed them on
+        # as unknown parameters. The values equal Clearpath's A200 defaults,
+        # so fixing the keys does not change how the robot drives.
+        linear.x.max_velocity: 1.0
+        linear.x.min_velocity: -1.0
+        linear.x.max_acceleration: 3.0
+        linear.x.min_acceleration: -3.0
+        angular.z.max_velocity: 2.0
+        angular.z.min_velocity: -2.0
+        angular.z.max_acceleration: 6.0
+        angular.z.min_acceleration: -6.0
+links:
+  box:
+    - name: user_bay_cover
+      parent: default_mount
+      xyz: [0.0, 0.0, 0.0075]
+      rpy: [0.0, 0.0, 0.0]
+      size: [0.4, 0.4, 0.002]
+  cylinder: []
+  frame: []
+  mesh: []
+  sphere: []
+mounts:
+  bracket:
+    - parent: top_plate_mount_d1
+      xyz: [0.0, 0.0, 0.0]
+      rpy: [0.0, 0.0, 0.0]
+      model: horizontal
+  fath_pivot:
+    - parent: sensor_arch_mount
+      xyz: [0.0, 0.0, -0.021]
+      rpy: [3.1415, 0.0, 0.0]
+      angle: 0.0
+  riser: []
+  disk: []
+  post: []
+sensors:
+  # CHANGED: removed the Intel RealSense D435 (camera), both Swift Navigation
+  # Duro GPS units (gps), and the SICK LMS1xx (lidar2d). None of them is on
+  # the robot any more (confirmed in the lab 2026-11-06).
+  camera: []
+  gps: []
+  lidar2d: []
+  imu:
+    - model: microstrain_imu
+      urdf_enabled: true
+      launch_enabled: true
+      parent: base_link
+      xyz: [0.19, 0.0, 0.149]
+      rpy: [0.0, 0.0, 0.0]
+      ros_parameters:
+        microstrain_inertial_driver:
+          imu_frame_id: imu_0_link
+          # CHANGED: was /dev/microstrain_main. On Nuvo this unit's serial
+          # (0000__6253.95288) makes the host udev rule create
+          # /dev/microstrain_rtk instead; /dev/microstrain_main does not exist.
+          port: /dev/microstrain_rtk
+          use_enu_frame: true
+  # CHANGED: added the Ouster OS1-128 (serial 992050000107, firmware 2.3.0).
+  lidar3d:
+    - model: ouster_os1
+      urdf_enabled: true
+      launch_enabled: true
+      parent: base_link
+      # ROUGH: centered on the robot, about 0.3 m up. Replace with measured
+      # offsets from base_link once they are taken in the lab.
+      xyz: [0.0, 0.0, 0.3]
+      rpy: [0.0, 0.0, 0.0]
+      ros_parameters:
+        ouster_driver:
+          sensor_hostname: 192.168.131.128
+          # Where the lidar sends its packets: Nuvo for now. If the driver
+          # moves to bender in Phase 5, this becomes 192.168.131.5.
+          udp_dest: 192.168.131.1
+          lidar_port: 7502
+          imu_port: 7503
+          proc_mask: IMU|PCL|SCAN|IMG|RAW|TLM
+          use_system_default_qos: false
+          # The photos show the finned heat-sink top.
+          cap_type: fins

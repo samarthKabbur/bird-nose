@@ -1,0 +1,102 @@
+# Bird Nose services for development, simulation, and telemetry.
+#
+# Easiest start:   ./tools/dev.sh        (builds the image, opens a shell)
+#
+# Manual use (run from the repository root):
+#   docker compose -f containers/compose.yaml up -d dev
+#   docker compose -f containers/compose.yaml exec dev bash
+#   docker compose -f containers/compose.yaml --profile sim up       # Gazebo + Nav2 + RViz
+#   docker compose -f containers/compose.yaml --profile telemetry up # Foxglove Bridge
+#
+# Optional overlays, added with a second -f:
+#   containers/compose.nvidia.yaml    NVIDIA GPU passthrough (off by default)
+#   containers/compose.hardware.yaml  physical robot (Phase 5; empty for now)
+#
+# Settings come from containers/.env (copied from .env.example by
+# tools/setup_env.sh). That file is machine-local and never committed.
+#
+# Safety: these services default to ROS domain 42 and localhost-only
+# discovery, so nothing started here can reach the physical robot,
+# which runs on domain 0.
+
+name: bird-nose
+
+x-ros-common: &ros-common
+  image: bird-nose-dev:jazzy
+  build:
+    context: ..
+    dockerfile: containers/Dockerfile
+    target: dev
+    args:
+      USERNAME: ${CONTAINER_USER:-dev}
+      USER_UID: ${HOST_UID:-1000}
+      USER_GID: ${HOST_GID:-1000}
+  network_mode: host
+  ipc: host
+  environment:
+    ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
+    RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+    ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE:-LOCALHOST}
+    BIRD_NOSE_WS: /workspaces/bird-nose
+    BIRD_NOSE_SIM_SETUP: /home/${CONTAINER_USER:-dev}/.bird_nose/sim_setup/
+    DISPLAY: ${DISPLAY:-:0}
+    QT_X11_NO_MITSHM: "1"
+  volumes:
+    - ..:/workspaces/bird-nose
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - bird-nose-history:/commandhistory
+    # Shared by sim, nav2, and rviz: Clearpath's generators write launch and
+    # parameter files here, and Nav2 reads them.
+    - bird-nose-sim-setup:/home/${CONTAINER_USER:-dev}/.bird_nose
+  working_dir: /workspaces/bird-nose
+
+services:
+  # Interactive development shell: build, test, and run anything by hand.
+  dev:
+    <<: *ros-common
+    container_name: bird-nose-dev
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+
+  # Simulated Husky A200 in Gazebo Harmonic (Clearpath simulator).
+  sim:
+    <<: *ros-common
+    container_name: bird-nose-sim
+    profiles: ["sim"]
+    command: ["ros2", "launch", "bird_nose_bringup", "sim.launch.py"]
+
+  # Nav2 with SLAM against the simulated robot (finalized in Phase 2).
+  nav2:
+    <<: *ros-common
+    container_name: bird-nose-nav2
+    profiles: ["sim"]
+    depends_on: [sim]
+    command: ["ros2", "launch", "bird_nose_bringup", "nav2.launch.py"]
+
+  # Bird Nose autonomy nodes.
+  algorithm:
+    <<: *ros-common
+    container_name: bird-nose-algorithm
+    profiles: ["sim"]
+    depends_on: [sim]
+    command: ["ros2", "launch", "bird_nose_algorithms", "algorithms.launch.py"]
+
+  # Engineering visualization (Ubuntu desktop only).
+  rviz:
+    <<: *ros-common
+    container_name: bird-nose-rviz
+    profiles: ["sim", "operator"]
+    command: ["ros2", "launch", "bird_nose_bringup", "rviz.launch.py"]
+
+  # Foxglove Bridge for dashboards and recording review. Listens on
+  # localhost only; reach it remotely through an SSH tunnel.
+  telemetry:
+    <<: *ros-common
+    container_name: bird-nose-telemetry
+    profiles: ["telemetry", "operator"]
+    command: ["ros2", "launch", "bird_nose_telemetry", "telemetry.launch.py"]
+
+volumes:
+  bird-nose-history:
+  bird-nose-sim-setup:

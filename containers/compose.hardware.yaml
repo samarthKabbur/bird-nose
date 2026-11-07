@@ -1,0 +1,12 @@
+# Physical robot overlay. Intentionally empty until Phase 5.
+#
+# Phase 5 will add the Clearpath Jazzy robot service here (pinned to
+# ghcr.io/clearpathrobotics/clearpath_docker@sha256:d54617757d37b875152839f4a6195887caf49fdefe87237a4919619be57aded0,
+# the image that has already driven the robot) together with the scripts
+# in tools/robot/. Hardware runs on ROS domain 0 with subnet discovery,
+# and must only ever be started deliberately with this file.
+#
+# Do not add services that can command the robot until the hardware safety
+# controls and test gates in the living doc are documented.
+
+services: {}

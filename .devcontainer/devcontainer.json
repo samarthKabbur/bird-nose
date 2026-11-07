@@ -1,0 +1,23 @@
+{
+  // VS Code "Dev Containers": opens this repository inside the same `dev`
+  // service that ./tools/dev.sh starts, so editor tools, compilers, and ROS
+  // packages are identical for everyone.
+  "name": "Bird Nose (ROS 2 Jazzy)",
+  "dockerComposeFile": ["../containers/compose.yaml"],
+  "service": "dev",
+  "runServices": ["dev"],
+  "workspaceFolder": "/workspaces/bird-nose",
+  "initializeCommand": "bash tools/setup_env.sh",
+  "remoteUser": "dev",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-vscode.cpptools",
+        "redhat.vscode-yaml",
+        "redhat.vscode-xml"
+      ]
+    }
+  }
+}

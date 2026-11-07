@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!--
+  Bird Nose payloads attached to the Clearpath Husky A200 model.
+
+  The Husky itself and its Clearpath-supported sensors come from
+  config/robots/husky-a200/robot.yaml. This file adds only what Clearpath
+  does not know about: the 16SoundsUSB microphone modules and the custom
+  crossbar. Positions are placeholders until they are measured in the lab.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="bird_nose_payloads">
+  <xacro:macro name="bird_nose_payloads" params="parent">
+    <!-- Microphone module links go here once their positions are measured. -->
+  </xacro:macro>
+</robot>

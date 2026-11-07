@@ -1,0 +1,27 @@
+# NVIDIA GPU passthrough overlay. Off by default (decided 2026-11-03):
+# the base setup works without a GPU, and this file is reserved so the GPU
+# can be switched on later without restructuring anything.
+#
+# Prerequisites on the host: the NVIDIA driver and the NVIDIA Container
+# Toolkit (check with `docker info | grep -i runtimes` -> should list nvidia).
+#
+# Use it by adding it after the base file:
+#   docker compose -f containers/compose.yaml -f containers/compose.nvidia.yaml --profile sim up
+# or set GPU=1 when running ./tools/dev.sh.
+
+x-gpu: &gpu
+  environment:
+    NVIDIA_VISIBLE_DEVICES: all
+    NVIDIA_DRIVER_CAPABILITIES: all
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
+services:
+  dev: *gpu
+  sim: *gpu
+  rviz: *gpu
