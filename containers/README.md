@@ -50,6 +50,7 @@ Shared by every service:
 - Volume `bird-nose-history`: shell history that survives container restarts.
 - Volume `bird-nose-sim-setup`, mounted at `~/.bird_nose`: Clearpath's generated simulation files, shared by `sim`, `nav2`, and `rviz`.
 - The X11 socket, for Gazebo and RViz windows.
+- GPU access through Mesa (Intel or AMD graphics): `/dev/dri` is mounted, a cgroup rule allows DRM devices (major number 226), and the container user joins the host's `video` and `render` groups. Without this, Mesa reports "Failed to query drm device" and RViz may fail to start. NVIDIA graphics use `compose.nvidia.yaml` instead.
 
 ## Configuration
 
@@ -63,6 +64,9 @@ Shared by every service:
 | `RMW_IMPLEMENTATION` | `rmw_fastrtps_cpp` | Fast DDS, the same middleware as the robot |
 | `ROS_AUTOMATIC_DISCOVERY_RANGE` | `LOCALHOST` | Keeps simulation traffic on this computer |
 | `DISPLAY` | `:0` | X display for GUI windows |
+| `VIDEO_GID`, `RENDER_GID` | your machine's | Host group IDs that own `/dev/dri`; they differ between installs, so `setup_env.sh` looks them up |
+
+`tools/setup_env.sh` never changes values in an existing `.env`, but it adds any setting that `.env.example` gained since, so every machine picks up new settings by running `./tools/dev.sh`.
 
 To change the base image, update the digest in `Dockerfile` in its own pull request and note why.
 

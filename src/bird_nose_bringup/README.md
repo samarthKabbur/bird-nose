@@ -66,7 +66,7 @@ These launch files add no nodes of their own. The simulated robot publishes Clea
 
 ## Why Nav2 is pointed at the Ouster
 
-Clearpath's Nav2 demos default to a 2D lidar scan, `sensors/lidar2d_0/scan`. Bird Nose has no 2D lidar, so `nav2.launch.py` reads `robot.yaml` from the setup folder and passes the Ouster's scan topic instead. In simulation, Clearpath's Gazebo bridge publishes that topic as `sensor_msgs/LaserScan` alongside the point cloud (`sensors/lidar3d_0/points`). `nav2.launch.py` stops with a clear error if the simulation has not written `robot.yaml` yet.
+Clearpath's Nav2 demos default to a 2D lidar scan, `sensors/lidar2d_0/scan`. Bird Nose has no 2D lidar, so `nav2.launch.py` reads `robot.yaml` from the setup folder and passes the Ouster's scan topic instead. In simulation, Clearpath's Gazebo bridge publishes that topic as `sensor_msgs/LaserScan` alongside the point cloud (`sensors/lidar3d_0/points`). It is a single ring, so SLAM accepts it without flattening the point cloud first. `nav2.launch.py` stops with a clear error if the simulation has not written `robot.yaml` yet.
 
 ## Why the setup folder is copied
 
@@ -79,7 +79,7 @@ Clearpath's generators write launch and parameter files next to `robot.yaml`. Mo
 ## Limitations
 
 - `nav2.launch.py` uses Clearpath's demo parameters. Tuned parameters move to `bird_nose_navigation` in Phase 2.
-- Whether SLAM and Nav2 accept the simulated Ouster scan as-is is confirmed in the first Phase 2 run. If they do not, the next step is to flatten the point cloud into a 2D scan.
+- The simulated Ouster scan works with SLAM and Nav2 as-is: it is one ring of 1024 points from −π to +π at about 11.5 Hz (first Phase 2 run, 2026-11-06). The physical Ouster's driver may publish differently; check in Phase 5.
 
 ## See also
 

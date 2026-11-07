@@ -41,9 +41,20 @@ x-ros-common: &ros-common
     BIRD_NOSE_SIM_SETUP: /home/${CONTAINER_USER:-dev}/.bird_nose/sim_setup/
     DISPLAY: ${DISPLAY:-:0}
     QT_X11_NO_MITSHM: "1"
+    XDG_RUNTIME_DIR: /tmp/runtime-${CONTAINER_USER:-dev}
+  # GPU access for Gazebo and RViz through Mesa (Intel or AMD graphics):
+  # /dev/dri is mounted, the cgroup rule allows DRM devices (major 226), and
+  # the user joins the host's video and render groups that own those devices.
+  # On a machine without /dev/dri, Mesa falls back to CPU rendering.
+  device_cgroup_rules:
+    - "c 226:* rmw"
+  group_add:
+    - "${VIDEO_GID:-44}"
+    - "${RENDER_GID:-993}"
   volumes:
     - ..:/workspaces/bird-nose
     - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - /dev/dri:/dev/dri
     - bird-nose-history:/commandhistory
     # Shared by sim, nav2, and rviz: Clearpath's generators write launch and
     # parameter files here, and Nav2 reads them.
