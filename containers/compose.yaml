@@ -22,7 +22,9 @@
 name: bird-nose
 
 x-ros-common: &ros-common
-  image: bird-nose-dev:jazzy
+  # BIRD_NOSE_IMAGE lets CI build and run its own copy without replacing a
+  # developer's image on the same computer.
+  image: ${BIRD_NOSE_IMAGE:-bird-nose-dev:jazzy}
   build:
     context: ..
     dockerfile: containers/Dockerfile

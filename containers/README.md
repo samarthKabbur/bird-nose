@@ -66,6 +66,14 @@ Shared by every service:
 | `DISPLAY` | `:0` | X display for GUI windows |
 | `VIDEO_GID`, `RENDER_GID` | your machine's | Host group IDs that own `/dev/dri`; they differ between installs, so `setup_env.sh` looks them up |
 
+One optional variable is not in `.env.example`:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `BIRD_NOSE_IMAGE` | `bird-nose-dev:jazzy` | Image name and tag. The self-hosted simulation test sets `bird-nose-ci:jazzy`, so its build never replaces a developer's image on the same computer. |
+
+Variables set in the shell override `.env`, which is how CI changes the domain and image for one run without editing the file.
+
 `tools/setup_env.sh` never changes values in an existing `.env`, but it adds any setting that `.env.example` gained since, so every machine picks up new settings by running `./tools/dev.sh`.
 
 To change the base image, update the digest in `Dockerfile` in its own pull request and note why.
@@ -73,6 +81,8 @@ To change the base image, update the digest in `Dockerfile` in its own pull requ
 ## Testing
 
 `docker compose -f containers/compose.yaml --profile sim --profile telemetry config --quiet` checks the Compose file. A successful `./tools/dev.sh` followed by `colcon build && colcon test` in the container checks the image.
+
+CI runs both checks automatically: the `checks` job validates every profile and overlay on each pull request, and the Docker image workflow builds the `dev` image when files here change and once a week. See [docs/ci.md](../docs/ci.md).
 
 ## Limitations
 
@@ -82,5 +92,6 @@ To change the base image, update the digest in `Dockerfile` in its own pull requ
 ## See also
 
 - [tools](../tools/README.md): `dev.sh` and `setup_env.sh`
+- [docs/ci.md](../docs/ci.md): how CI builds and checks the image
 - [docs/architecture.md](../docs/architecture.md): how containers map to computers
 - Living doc: "Containers" and "Safety and deployment boundaries"

@@ -1,0 +1,15 @@
+# Dependabot opens one pull request a month that updates the GitHub Actions
+# used in .github/workflows/. Actions are pinned to a commit, with the version
+# in a comment; Dependabot updates both. CI checks the update like any other
+# pull request. See docs/ci.md, "Who updates what".
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: chore

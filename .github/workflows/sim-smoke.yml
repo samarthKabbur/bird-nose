@@ -1,0 +1,83 @@
+# Manual simulation smoke test on a self-hosted runner: Gazebo without a
+# window, Nav2 with SLAM, and one navigation goal (tools/ci/sim_smoke.sh).
+#
+# Runs only when someone with write access starts it from the Actions tab,
+# never on pull requests, so code from forks cannot reach the runner.
+# The runner must be a development computer that is not on the robot network.
+# Setup and isolation rules: docs/ci.md.
+name: Simulation smoke test (self-hosted)
+
+on:
+  workflow_dispatch:
+    inputs:
+      goal_x:
+        description: Goal x in the map frame, metres
+        default: "1.0"
+      goal_y:
+        description: Goal y in the map frame, metres
+        default: "0.0"
+      gpu:
+        description: Use the NVIDIA GPU (compose.nvidia.yaml; needs the NVIDIA Container Toolkit)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# One simulation at a time on the runner.
+concurrency:
+  group: sim-smoke
+  cancel-in-progress: false
+
+jobs:
+  sim-smoke:
+    name: Gazebo + Nav2 goal
+    runs-on: [self-hosted, linux, x64, bird-nose-sim]
+    timeout-minutes: 45
+    env:
+      # Its own Compose project, image tag, and ROS domain, so the test does
+      # not collide with a developer's containers on the same computer.
+      # Domain 43 with localhost discovery: never the robot's domain 0.
+      COMPOSE_PROJECT_NAME: bird-nose-ci
+      # Compose reads its files from here; the NVIDIA overlay is added when
+      # the gpu input is on. Windowless Gazebo needs a GPU whose driver is in
+      # the container (see tools/ci/README.md, Limitations).
+      COMPOSE_FILE: ${{ inputs.gpu && 'containers/compose.yaml:containers/compose.nvidia.yaml' || 'containers/compose.yaml' }}
+      BIRD_NOSE_IMAGE: bird-nose-ci:jazzy
+      ROS_DOMAIN_ID: "43"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Create containers/.env for the runner user
+        run: ./tools/setup_env.sh
+
+      - name: Build the image
+        run: docker compose build dev
+
+      - name: Run the smoke test
+        env:
+          GOAL_X: ${{ inputs.goal_x }}
+          GOAL_Y: ${{ inputs.goal_y }}
+        run: |
+          docker compose run --rm --no-deps -T \
+            -e GOAL_X -e GOAL_Y dev tools/ci/sim_smoke.sh
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: cat data/reports/sim_smoke/*/report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Keep logs for a week
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: sim-smoke-logs
+          path: data/reports/sim_smoke/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Remove containers and volumes
+        if: ${{ always() }}
+        run: docker compose down --volumes --remove-orphans

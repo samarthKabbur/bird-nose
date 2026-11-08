@@ -8,7 +8,7 @@
 
 ## How it was tested
 
-- [ ] `colcon build` and `colcon test` pass in the dev container
+- [ ] `colcon build` and `colcon test` pass in the dev container (CI repeats this)
 - [ ] Tried in simulation (describe what you ran)
 - [ ] Not applicable (docs or configuration only)
 

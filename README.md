@@ -1,5 +1,7 @@
 # Bird Nose
 
+[![CI](https://github.com/samarthKabbur/bird-nose/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/samarthKabbur/bird-nose/actions/workflows/ci.yml)
+
 ROS 2 software for Bird Nose, a Clearpath Husky A200 that identifies birds by sound and localizes them, built by senior design team FH12 at UT Austin.
 
 Everything ROS-related runs in Docker containers: ROS 2 Jazzy, Gazebo Harmonic, Nav2, and Clearpath's Jazzy packages. A computer needs only Docker and Git, so every machine runs the same environment.
@@ -73,6 +75,7 @@ Everything in `containers/compose.yaml` uses the left column. The robot is start
 ```text
 bird-nose/
 ├── .devcontainer/          VS Code dev container (uses the dev service)
+├── .github/                CI workflows, Dependabot, pull request template
 ├── containers/             Dockerfile, Compose file, overlays, .env.example
 ├── config/
 │   ├── hosts/              per-role settings (workstation, Nuvo, bender)
@@ -81,9 +84,10 @@ bird-nose/
 ├── src/                    ROS 2 packages (bird_nose_*)
 ├── tools/
 │   ├── dev.sh              one-command development environment
+│   ├── ci/                 scripts CI runs (docs check, simulation smoke test)
 │   └── robot/              robot container scripts (wired up in Phase 5)
 ├── data/                   bags, logs, reports (contents never committed)
-├── docs/                   architecture diagrams and glossary
+├── docs/                   architecture diagrams, CI, glossary
 └── dependencies.repos      extra source repositories for vcs import
 ```
 
@@ -94,6 +98,7 @@ Every module has a README with the same sections: Purpose, Contents, Usage, Inte
 | Path | Role | Docs |
 | --- | --- | --- |
 | `.devcontainer/` | VS Code dev container, using the `dev` service | [README](.devcontainer/README.md) |
+| `.github/` | CI workflows, Dependabot, and the pull request template | [docs/ci.md](docs/ci.md) |
 | `containers/` | Docker image, Compose services, overlays, `.env.example` | [README](containers/README.md) |
 | `config/` | Robot, host roles, and scenarios | [README](config/README.md) |
 | `config/robots/` | Clearpath `robot.yaml` for the Husky A200 | [README](config/robots/README.md) |
@@ -106,9 +111,10 @@ Every module has a README with the same sections: Purpose, Contents, Usage, Inte
 | `src/bird_nose_algorithms` | Bird Nose autonomy nodes | [README](src/bird_nose_algorithms/README.md) |
 | `src/bird_nose_telemetry` | Foxglove Bridge and MCAP recording | [README](src/bird_nose_telemetry/README.md) |
 | `tools/` | Host scripts: `dev.sh`, `setup_env.sh` | [README](tools/README.md) |
+| `tools/ci/` | Scripts CI runs: docs check and simulation smoke test | [README](tools/ci/README.md) |
 | `tools/robot/` | Robot container scripts, wired up in Phase 5 | [README](tools/robot/README.md) |
 | `data/` | Local recordings, logs, and reports | [README](data/README.md) |
-| `docs/` | Architecture diagrams and glossary | [architecture](docs/architecture.md), [glossary](docs/glossary.md) |
+| `docs/` | Architecture diagrams, CI, and glossary | [architecture](docs/architecture.md), [CI](docs/ci.md), [glossary](docs/glossary.md) |
 
 ## Robot configuration
 
@@ -116,4 +122,4 @@ Every module has a README with the same sections: Purpose, Contents, Usage, Inte
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). In short: branch from `main`, open a pull request, and never commit machine-local addresses, passwords, or recordings.
+See [CONTRIBUTING.md](CONTRIBUTING.md). In short: branch from `main`, open a pull request, let CI pass, and never commit machine-local addresses, passwords, or recordings. What CI checks and how to run each check yourself is in [docs/ci.md](docs/ci.md).
