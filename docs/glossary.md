@@ -17,6 +17,7 @@ Terms used across the Bird Nose repository, in alphabetical order.
 | **Digest** | A content hash (`sha256:…`) that names exactly one image. A tag like `jazzy` can be moved to a new image; a digest cannot, so pinning to a digest makes builds reproducible. |
 | **Discovery range** | How far ROS 2 looks for other nodes: `LOCALHOST` (this computer only) or `SUBNET` (the local network). Set by `ROS_AUTOMATIC_DISCOVERY_RANGE`. |
 | **Domain ID** | A number (`ROS_DOMAIN_ID`) that splits ROS 2 traffic into separate channels. Nodes on different domains never see each other: Bird Nose uses 0 for the robot and 42 for simulation. |
+| **Event handler (launch)** | A launch-file rule that starts or stops actions when something happens, such as a process exiting, instead of after a fixed delay. |
 | **Fast DDS** | The middleware implementation (`rmw_fastrtps_cpp`) Bird Nose uses everywhere. Every computer that should talk must use the same one. |
 | **Frame** | A named coordinate system, such as `map`, `odom`, or `base_link`. TF tracks how frames relate over time. |
 | **Generators (Clearpath)** | Clearpath tools that read `robot.yaml` and write the robot model, launch files, and parameters into the setup folder next to it. |
@@ -30,10 +31,12 @@ Terms used across the Bird Nose repository, in alphabetical order.
 | **QoS** | Quality of Service: settings such as reliability and history depth that publishers and subscribers must agree on. Sensor data usually uses "best effort". |
 | **REP** | ROS Enhancement Proposal, a ROS convention document. REP 103 sets units (metres, seconds, radians) and axis directions; REP 105 names standard frames. |
 | **`robot.yaml`** | Clearpath's single description of a robot: platform, attachments, sensors, namespace, middleware. Ours is in `config/robots/husky-a200/`. |
+| **Scenario** | A YAML file in `config/scenarios/` that fully describes one simulated run (world, start pose, seed, route, birds) and the checks that decide pass or fail. |
 | **Self-hosted runner** | A GitHub program installed on a team computer that runs workflow jobs there instead of on GitHub's machines. Bird Nose uses one only for the manually started simulation test. |
 | **Setup path** | The folder holding `robot.yaml` that Clearpath's generators write into: `/etc/clearpath/` on the robot, `~/.bird_nose/sim_setup/` in simulation. |
 | **Sim time** | Using Gazebo's `/clock` topic instead of the wall clock, so nodes stay in step with the simulation when it runs slower or faster than real time (`use_sim_time:=true`). |
 | **SLAM** | Simultaneous localization and mapping: building a map while working out where the robot is in it. |
+| **Survey stop** | A point on the survey route where the robot stops to record, every 20 ft by default. |
 | **TF** | ROS's transform system, which publishes how frames relate (topics `tf` and `tf_static`). |
 | **udev rule** | A host rule that gives a device a stable name, such as `/dev/microstrain_rtk`. Rules run on the host, never in containers. |
 | **Volume** | Storage Docker keeps outside a container so it survives restarts, such as `bird-nose-sim-setup`. |

@@ -1,0 +1,23 @@
+# Navigation-only survey through one orchard aisle (Phase 4 step 4.1).
+#
+# Clearpath's orchard world has rows of trees every 3 m along the world x
+# axis, at y = -0.1, 2.9, 5.9, ... The robot starts at the open end of the
+# aisle between the first two rows (y = 1.4) and drives 24.4 m (80 ft) down
+# it, stopping every 20 ft: four stops. There are no birds yet; the stop
+# time is shortened from the memo's 30 s to keep the run quick.
+
+format: 1
+name: orchard_nav_survey
+description: Four 20 ft stops down one orchard aisle; navigation only
+world: orchard
+robot_start: {x: 0.0, y: 1.4, yaw: 0.0}   # world frame; metres, radians
+seed: 1
+survey:
+  waypoints: [[0.0, 1.4], [24.4, 1.4]]    # world frame, metres
+  stop_every_ft: 20
+  record_s: 10                            # time at each stop, simulation seconds
+birds: []
+timeout_s: 900                            # wall-clock limit for the whole run
+checks:
+  stops_reached: all
+  max_nav_failures: 0

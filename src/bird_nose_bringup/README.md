@@ -13,6 +13,7 @@ Package type: `ament_cmake`, launch files only.
 | `launch/sim.launch.py` | Copies `robot.yaml` into a scratch setup folder, then runs `clearpath_gz simulation.launch.py` from it |
 | `launch/nav2.launch.py` | SLAM (Clearpath's `slam.launch.py`) and Nav2 (Nav2's `navigation_launch.py`) against that setup folder, with Clearpath's Nav2 parameters plus Bird Nose's changes |
 | `launch/rviz.launch.py` | Clearpath's navigation RViz view, with the namespace read from `robot.yaml` |
+| `launch/scenario.launch.py` | One scenario end to end: simulation, then Nav2 and the survey once the simulation publishes, plus recording; stops when the survey ends |
 
 ## Usage
 
@@ -47,6 +48,20 @@ Or the whole stack with Compose: `docker compose -f containers/compose.yaml --pr
 | `slam` | `true` | Build a map with SLAM (`slam.launch.py`) before starting `nav2.launch.py` |
 | `scan_topic` | empty | Scan topic for Nav2 and SLAM. Empty picks one from `robot.yaml`: the Ouster's `/<namespace>/sensors/lidar3d_0/scan` when there is no 2D lidar, as on Bird Nose. |
 | `nav2_overrides` | `bird_nose_navigation/config/nav2_overrides.yaml` | Bird Nose's changes to Clearpath's Nav2 parameters; see [bird_nose_navigation](../bird_nose_navigation/README.md) |
+
+### scenario.launch.py arguments
+
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| `scenario` | `orchard_nav_survey` | Scenario name in `config/scenarios/`, or a file path |
+| `seed` | empty | Random seed; empty uses the scenario's own |
+| `headless` | `false` | Run Gazebo without its window |
+| `rviz` | `false` | Also open Clearpath's RViz view |
+| `record` | `true` | Record the run with `record_run` (to `data/bags/<date>_<time>_scenario-<name>/`) |
+
+`scenario.launch.py` uses event handlers rather than fixed delays: Nav2 and the survey start when `wait_for_topics` sees `/clock` and odometry, and the whole launch shuts down when the survey node exits or the scenario's `timeout_s` passes. It refuses to run on ROS domain 0. Run and judge in one step with `tools/ci/run_scenario.sh`.
+
+> **Side note: event handlers instead of sleeps.** A fixed delay ("start Nav2 after 30 s") is too short on a slow computer and wastes time on a fast one. `RegisterEventHandler(OnProcessExit(...))` starts the next part exactly when the previous one reports it is ready, which also makes runs more repeatable.
 
 ### rviz.launch.py arguments
 

@@ -1,0 +1,11 @@
+# Record a sample at the current survey stop.
+
+# Goal
+uint32 stop_index              # stop number, from 0
+float32 duration_s             # how long to record, seconds
+---
+# Result
+Sample sample                  # the recording that was made
+---
+# Feedback
+float32 elapsed_s              # seconds recorded so far
