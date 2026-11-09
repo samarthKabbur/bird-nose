@@ -79,7 +79,9 @@ show_log() {
   fi
 }
 
-# Wait until a command succeeds, retrying every 5 s. Fails early if the launch
+# Wait until a command succeeds, retrying every 5 s. Each check must have its
+# own timeout: a ROS command that waits for a missing node forever would
+# otherwise stop this loop from ever reaching its timeout. Fails early if the launch
 # writing to the log has stopped or reports a crashed process, and fails
 # after the timeout otherwise. Either way, prints that log's useful lines.
 wait_for() {
@@ -125,7 +127,7 @@ PIDS+=($!)
 
 sim_ready() {
   timeout 8 ros2 topic echo /clock --once &&
-    ros2 topic list --no-daemon | grep -x "/$NS/platform/odom/filtered"
+    timeout 20 ros2 topic list --no-daemon | grep -x "/$NS/platform/odom/filtered"
 }
 wait_for "simulation clock and odometry" "$SIM_TIMEOUT_S" "${PIDS[0]}" "$OUT/sim.log" sim_ready
 
@@ -134,7 +136,7 @@ setsid ros2 launch bird_nose_bringup nav2.launch.py > "$OUT/nav2.log" 2>&1 &
 PIDS+=($!)
 
 nav2_ready() {
-  ros2 lifecycle get "/$NS/bt_navigator" | grep '^active' &&
+  timeout 10 ros2 lifecycle get "/$NS/bt_navigator" | grep '^active' &&
     timeout 10 ros2 topic echo "/$NS/map" --once
 }
 wait_for "Nav2 active and SLAM map published" "$NAV2_TIMEOUT_S" "${PIDS[1]}" "$OUT/nav2.log" nav2_ready
