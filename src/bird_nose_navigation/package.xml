@@ -3,14 +3,20 @@
 <package format="3">
   <name>bird_nose_navigation</name>
   <version>0.0.1</version>
-  <description>Nav2 parameters, maps, and behavior trees tuned for Bird Nose. Starts from Clearpath's Nav2 demo configuration in Phase 2.</description>
+  <description>Bird Nose's Nav2 configuration: changes to Clearpath's Nav2 demo parameters, and the Python helper that merges them.</description>
   <maintainer email="samarthKabbur@users.noreply.github.com">Samarth Kabbur</maintainer>
   <license>TODO</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>python3-yaml</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

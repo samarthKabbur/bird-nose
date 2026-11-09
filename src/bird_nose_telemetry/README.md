@@ -56,7 +56,7 @@ Stop with Ctrl+C. The script then asks for one line of notes and the outcome, an
 | --- | --- |
 | `*.mcap` | The recording; open it in Foxglove |
 | `metadata.yaml` | Topic list and message counts, written by `ros2 bag` |
-| `run_metadata.yaml` | Git commit, branch, and whether there were uncommitted changes; base image digest; `robot.yaml` hash; Nav2 configuration revision (`clearpath-defaults` until tuned files exist); ROS domain and middleware; scenario, seed, notes, and outcome |
+| `run_metadata.yaml` | Git commit, branch, and whether there were uncommitted changes; base image digest; `robot.yaml` hash; Nav2 configuration revision (the commit that last changed `bird_nose_navigation/config/`, or `clearpath-defaults` if that folder is empty); ROS domain and middleware; scenario, seed, notes, and outcome |
 
 That is everything the plan asks each retained run to carry, so any recording can be traced back to the exact code and configuration that produced it. `SCENARIO`, `SEED`, and `NOTES` can also be set as environment variables.
 

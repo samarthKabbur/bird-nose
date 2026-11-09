@@ -13,6 +13,8 @@
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>clearpath_gz</exec_depend>
   <exec_depend>clearpath_nav2_demos</exec_depend>
+  <exec_depend>bird_nose_navigation</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
   <exec_depend>clearpath_viz</exec_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

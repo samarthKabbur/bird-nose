@@ -1,0 +1,24 @@
+# Bird Nose's changes to Clearpath's Nav2 parameters.
+#
+# nav2.launch.py (bird_nose_bringup) starts from Clearpath's file for this
+# platform (clearpath_nav2_demos/config/a200/nav2.yaml in the installed
+# package), applies the same adjustments Clearpath's own launch file makes,
+# then merges this file on top. Only keys listed here change; everything
+# else stays as Clearpath ships it. The merged result is written to
+# /tmp/bird_nose_nav2_<namespace>.yaml on every launch, so you can read
+# exactly what Nav2 received.
+#
+# Rules (see this package's README): every value says what it was and why
+# it changed, and any change that affects motion is tried in simulation
+# first, with the run noted in the pull request.
+
+bt_navigator:
+  ros__parameters:
+    # Was 20 (Clearpath). Milliseconds the behavior tree waits for an action
+    # server (planner, controller, recoveries) to accept a request, in
+    # simulation time. With Gazebo rendering on the GPU, the controller's
+    # first follow_path took longer than 20 ms, and Jazzy's default tree
+    # aborted the whole goal without trying a recovery (2026-11-07 smoke
+    # test on hero). 200 ms covers that with margin and still fails fast
+    # if a server is really gone.
+    default_server_timeout: 200

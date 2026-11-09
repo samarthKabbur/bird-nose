@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The entry points that start Bird Nose: the simulated Husky A200, Nav2, and RViz. They wrap Clearpath's own launch files so Bird Nose uses the repository's `robot.yaml` and keeps generated files out of Git. Hardware bringup is added in Phase 5.
+The entry points that start Bird Nose: the simulated Husky A200, Nav2, and RViz. They wrap Clearpath's own launch files so Bird Nose uses the repository's `robot.yaml` and keeps generated files out of Git. Nav2 is the exception: it starts through Nav2's own `navigation_launch.py`, so it can run with Bird Nose's parameters. Hardware bringup is added in Phase 5.
 
 Package type: `ament_cmake`, launch files only.
 
@@ -11,7 +11,7 @@ Package type: `ament_cmake`, launch files only.
 | File | What it starts |
 | --- | --- |
 | `launch/sim.launch.py` | Copies `robot.yaml` into a scratch setup folder, then runs `clearpath_gz simulation.launch.py` from it |
-| `launch/nav2.launch.py` | Clearpath's Nav2 demo, with SLAM by default, against that setup folder |
+| `launch/nav2.launch.py` | SLAM (Clearpath's `slam.launch.py`) and Nav2 (Nav2's `navigation_launch.py`) against that setup folder, with Clearpath's Nav2 parameters plus Bird Nose's changes |
 | `launch/rviz.launch.py` | Clearpath's navigation RViz view, with the namespace read from `robot.yaml` |
 
 ## Usage
@@ -46,6 +46,7 @@ Or the whole stack with Compose: `docker compose -f containers/compose.yaml --pr
 | `use_sim_time` | `true` | Use `/clock` from Gazebo |
 | `slam` | `true` | Build a map with SLAM (`slam.launch.py`) before starting `nav2.launch.py` |
 | `scan_topic` | empty | Scan topic for Nav2 and SLAM. Empty picks one from `robot.yaml`: the Ouster's `/<namespace>/sensors/lidar3d_0/scan` when there is no 2D lidar, as on Bird Nose. |
+| `nav2_overrides` | `bird_nose_navigation/config/nav2_overrides.yaml` | Bird Nose's changes to Clearpath's Nav2 parameters; see [bird_nose_navigation](../bird_nose_navigation/README.md) |
 
 ### rviz.launch.py arguments
 
@@ -78,7 +79,8 @@ Clearpath's generators write launch and parameter files next to `robot.yaml`. Mo
 
 ## Limitations
 
-- `nav2.launch.py` uses Clearpath's demo parameters. Tuned parameters move to `bird_nose_navigation` in Phase 2.
+- `nav2.launch.py` reproduces what Clearpath's `nav2.launch.py` does to its parameters (scan topic, drive type, rolling or static global costmap) so it can add Bird Nose's changes. If Clearpath changes that file, compare it with `clearpath_rewrites()` in `bird_nose_navigation`. Composition (all Nav2 nodes in one process) is not offered; Clearpath's launch file has it off by default too.
+- The global costmap always covers the whole map, also with SLAM, as in every Phase 2 and 3 run. Clearpath's file would make it a 20 m by 20 m window around the robot when SLAM is on, which leaves goals more than about 10 m away unplannable.
 - The simulated Ouster scan works with SLAM and Nav2 as-is: it is one ring of 1024 points from −π to +π at about 11.5 Hz (first Phase 2 run, 2026-11-06). The physical Ouster's driver may publish differently; check in Phase 5.
 
 ## See also

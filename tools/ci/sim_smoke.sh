@@ -79,7 +79,9 @@ show_log() {
   fi
 }
 
-# Wait until a command succeeds, retrying every 5 s. Fails early if the launch
+# Wait until a command succeeds, retrying every 5 s. Each check must have its
+# own timeout: a ROS command that waits for a missing node forever would
+# otherwise stop this loop from ever reaching its timeout. Fails early if the launch
 # writing to the log has stopped or reports a crashed process, and fails
 # after the timeout otherwise. Either way, prints that log's useful lines.
 wait_for() {
@@ -114,6 +116,15 @@ log "building the workspace"
 source "$WS/install/setup.bash"
 set -u
 
+# Another simulation or Nav2 on the same ROS domain would share node names,
+# /clock, and tf with this one and corrupt the test, so start only when the
+# domain is empty. (The self-hosted workflow uses its own domain, 43.)
+others="$(timeout 20 ros2 node list --no-daemon 2>/dev/null || true)"
+if [[ -n "$others" ]]; then
+  echo "$others" | head -n 10
+  fail "ROS domain $ROS_DOMAIN_ID already has running nodes (above). Stop them, or run with another domain, e.g. ROS_DOMAIN_ID=44 tools/ci/sim_smoke.sh"
+fi
+
 NS="$(python3 -c 'import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))["system"]["ros2"]["namespace"])' "$ROBOT_YAML")"
 log "robot namespace: $NS"
 
@@ -125,7 +136,7 @@ PIDS+=($!)
 
 sim_ready() {
   timeout 8 ros2 topic echo /clock --once &&
-    ros2 topic list --no-daemon | grep -x "/$NS/platform/odom/filtered"
+    timeout 20 ros2 topic list --no-daemon | grep -x "/$NS/platform/odom/filtered"
 }
 wait_for "simulation clock and odometry" "$SIM_TIMEOUT_S" "${PIDS[0]}" "$OUT/sim.log" sim_ready
 
@@ -134,15 +145,13 @@ setsid ros2 launch bird_nose_bringup nav2.launch.py > "$OUT/nav2.log" 2>&1 &
 PIDS+=($!)
 
 nav2_ready() {
-  ros2 lifecycle get "/$NS/bt_navigator" | grep '^active' &&
+  timeout 10 ros2 lifecycle get "/$NS/bt_navigator" | grep '^active' &&
     timeout 10 ros2 topic echo "/$NS/map" --once
 }
 wait_for "Nav2 active and SLAM map published" "$NAV2_TIMEOUT_S" "${PIDS[1]}" "$OUT/nav2.log" nav2_ready
 
 # --- One goal ---------------------------------------------------------------------
 GOAL="{pose: {header: {frame_id: map}, pose: {position: {x: $GOAL_X, y: $GOAL_Y, z: 0.0}, orientation: {w: 1.0}}}}"
-ACK_TIMEOUT='Timed out while waiting for action server to acknowledge goal request'
-
 # Send the goal once; prints Nav2's final status (empty if there was none).
 send_goal() {
   local goal_log="$1"
@@ -155,18 +164,6 @@ log "sending goal x=$GOAL_X y=$GOAL_Y"
 start=$SECONDS
 status="$(send_goal "$OUT/goal.log")"
 
-# Known start-up failure: Clearpath's Nav2 settings give each behavior-tree
-# action 20 ms to acknowledge a request (default_server_timeout). Under load,
-# the controller's first FollowPath can take longer; Jazzy's tree then aborts
-# without trying a recovery (no error code is set). Retry once for exactly
-# that case and say so in the report, so a real failure still fails.
-if [[ "$status" == "ABORTED" ]] && grep -q "$ACK_TIMEOUT" "$OUT/nav2.log"; then
-  log "goal aborted: an action server missed the 20 ms acknowledgement; retrying once"
-  echo "- First goal aborted by the 20 ms action acknowledgement timeout; retried once" >> "$OUT/report.md"
-  sleep 5
-  status="$(send_goal "$OUT/goal_retry.log")"
-fi
-
 elapsed=$(( SECONDS - start ))
 if [[ "$status" == "SUCCEEDED" ]]; then
   log "PASS: goal reached in ${elapsed}s"
@@ -174,7 +171,6 @@ if [[ "$status" == "SUCCEEDED" ]]; then
 else
   # Nav2's log says why a goal was aborted (planner, controller, costmap).
   show_log "$OUT/goal.log"
-  show_log "$OUT/goal_retry.log"
   show_log "$OUT/nav2.log"
   if [[ -n "$status" ]]; then
     fail "goal finished with status $status after ${elapsed}s (see nav2.log)"

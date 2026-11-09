@@ -9,6 +9,7 @@ Scripts that the CI workflows run, written so that you can run the same check yo
 | Path | What it does | Where it runs |
 | --- | --- | --- |
 | `check_docs.py` | Checks that the docs still match the code (see below) | Host or container; needs only Python 3 and Git |
+| `diff_params.py` | Lists every parameter that differs between two ROS parameter files, such as Clearpath's Nav2 file and the one Bird Nose generates | Host or container; needs Python 3 and PyYAML |
 | `sim_smoke.sh` | Starts the simulation without a window, starts Nav2 with SLAM, sends one goal, and passes if the robot reaches it | Inside the dev container |
 
 ## Usage
@@ -50,7 +51,7 @@ A module folder is any top-level folder, any folder directly under `config/` or 
 | `GOAL_TIMEOUT_S` | `180` | Seconds allowed to reach the goal |
 | `ROBOT_YAML` | `config/robots/husky-a200/robot.yaml` | Robot to simulate; the namespace is read from it |
 
-It refuses to run when `ROS_DOMAIN_ID` is `0` or unset, or when `ROS_AUTOMATIC_DISCOVERY_RANGE` is not `LOCALHOST`, so it cannot reach the physical robot. Logs (`colcon_build.log`, `sim.log`, `nav2.log`, `goal.log`) and `report.md` go to `data/reports/sim_smoke/<UTC time>/`. On a failure it prints the error lines and the last 40 lines of the log for the step that failed. It stops early, without waiting for the timeout, when a launch exits or reports `process has died`.
+It refuses to start while other ROS nodes are running on the same domain, because a second simulation or Nav2 would share node names, `/clock`, and transforms with the test; stop them or run with another domain, for example `ROS_DOMAIN_ID=44 tools/ci/sim_smoke.sh`. It also refuses to run when `ROS_DOMAIN_ID` is `0` or unset, or when `ROS_AUTOMATIC_DISCOVERY_RANGE` is not `LOCALHOST`, so it cannot reach the physical robot. Logs (`colcon_build.log`, `sim.log`, `nav2.log`, `goal.log`) and `report.md` go to `data/reports/sim_smoke/<UTC time>/`. On a failure it prints the error lines and the last 40 lines of the log for the step that failed. It stops early, without waiting for the timeout, when a launch exits or reports `process has died`.
 
 ## Testing
 
@@ -59,7 +60,6 @@ It refuses to run when `ROS_DOMAIN_ID` is `0` or unset, or when `ROS_AUTOMATIC_D
 ## Limitations
 
 - Without a window, Gazebo still renders the Ouster's simulated scan, but it picks the first graphics card it finds rather than the one your desktop uses. On a laptop with both Intel and NVIDIA graphics, such as `hero`, it picks the NVIDIA card. Without the NVIDIA driver in the container, Gazebo then crashes with "Failed to create dummy render window", and the script prints a hint. Fixes: start the container with `GPU=1 ./tools/dev.sh` (needs the NVIDIA Container Toolkit on the host), or run with `SIM_HEADLESS=false` on a desktop. Computers with only Intel or AMD graphics are not affected.
-- Clearpath's Nav2 settings give each behavior-tree action 20 ms to acknowledge a request (`default_server_timeout: 20`). Under load, such as windowless Gazebo on the GPU, the controller can miss that on the first goal. Nav2 then aborts at once with `error_code: 0` and logs `Timed out while waiting for action server to acknowledge goal request`. The script retries once for exactly that case and notes it in `report.md`; any other abort, or a second one, fails. The lasting fix is Bird Nose's own Nav2 parameters with a longer timeout (Phase 4).
 - It runs in the same container as everything else, so a simulation you already have running on the same ROS domain would interfere. The self-hosted workflow avoids this with domain 43.
 
 ## See also
