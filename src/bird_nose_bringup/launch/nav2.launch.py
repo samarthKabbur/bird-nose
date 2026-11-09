@@ -1,8 +1,15 @@
 """
-Nav2 with SLAM for the simulated robot.
+Nav2 with SLAM for the simulated robot, with Bird Nose's parameters.
 
-Uses Clearpath's Nav2 demos against the setup folder written by
-sim.launch.py, with simulation time.
+Starts SLAM through Clearpath's slam.launch.py, then Nav2 through Nav2's own
+navigation_launch.py, both against the setup folder written by sim.launch.py
+and with simulation time.
+
+Nav2's parameters are Clearpath's for this platform, plus Bird Nose's
+changes in bird_nose_navigation/config/nav2_overrides.yaml (merged by
+bird_nose_navigation.nav2_params). This file replaces the include of
+Clearpath's nav2.launch.py, which always loads Clearpath's file unchanged;
+it starts the same Nav2 nodes in the same namespace.
 
 Clearpath's demos default to a 2D lidar scan (sensors/lidar2d_0/scan). Bird
 Nose has only a 3D lidar, so when robot.yaml lists no 2D lidar this file
@@ -11,11 +18,13 @@ points Nav2 and SLAM at the Ouster's scan (sensors/lidar3d_0/scan) instead.
 import os
 
 from ament_index_python.packages import get_package_share_directory
+from bird_nose_navigation.nav2_params import build_params, load_yaml, write_params
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import (DeclareLaunchArgument, GroupAction, IncludeLaunchDescription,
+                            LogInfo, OpaqueFunction)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-import yaml
+from launch_ros.actions import PushRosNamespace
 
 
 def default_setup_path():
@@ -23,43 +32,80 @@ def default_setup_path():
     return path if path.endswith('/') else path + '/'
 
 
-def default_scan_topic(robot_yaml):
-    """Return the scan topic Nav2 should use, or '' to keep Clearpath's default."""
-    with open(robot_yaml) as f:
-        config = yaml.safe_load(f)
-    namespace = config['system']['ros2']['namespace']
-    sensors = config.get('sensors') or {}
-    if sensors.get('lidar2d'):
-        return ''
-    if sensors.get('lidar3d'):
+def default_overrides():
+    share = get_package_share_directory('bird_nose_navigation')
+    return os.path.join(share, 'config', 'nav2_overrides.yaml')
+
+
+def default_scan_topic(robot):
+    """Return the scan topic Nav2 and SLAM should use for this robot.yaml."""
+    namespace = robot['system']['ros2']['namespace']
+    sensors = robot.get('sensors') or {}
+    if not sensors.get('lidar2d') and sensors.get('lidar3d'):
         return f'/{namespace}/sensors/lidar3d_0/scan'
-    return ''
+    return f'/{namespace}/sensors/lidar2d_0/scan'  # Clearpath's default
+
+
+def platform_model(robot):
+    """Return the platform model, such as 'a200', from the serial number."""
+    return str(robot['serial_number']).split('-')[0]
+
+
+def is_diff_drive(robot):
+    """Return False only for a platform configured to drive as omnidirectional."""
+    drivetrain = (robot.get('platform') or {}).get('drivetrain') or {}
+    return 'omni' not in str(drivetrain.get('control', '')).lower()
 
 
 def _launch_nav(context):
-    share = get_package_share_directory('clearpath_nav2_demos')
     setup_path = LaunchConfiguration('setup_path').perform(context)
     robot_yaml = os.path.join(setup_path, 'robot.yaml')
     if not os.path.isfile(robot_yaml):
         raise RuntimeError(
             f'{robot_yaml} not found. Start the simulation first: '
             'sim.launch.py copies robot.yaml there.')
-    args = {
-        'setup_path': setup_path,
-        'use_sim_time': LaunchConfiguration('use_sim_time').perform(context),
-    }
-    scan_topic = LaunchConfiguration('scan_topic').perform(context)
-    scan_topic = scan_topic or default_scan_topic(robot_yaml)
-    if scan_topic:
-        args['scan_topic'] = scan_topic
+    robot = load_yaml(robot_yaml)
+    namespace = robot['system']['ros2']['namespace']
+    use_sim_time = LaunchConfiguration('use_sim_time').perform(context)
+    slam = LaunchConfiguration('slam').perform(context).lower() == 'true'
+    scan_topic = LaunchConfiguration('scan_topic').perform(context) or default_scan_topic(robot)
+
+    clearpath_share = get_package_share_directory('clearpath_nav2_demos')
     actions = []
-    if LaunchConfiguration('slam').perform(context).lower() == 'true':
+    if slam:
         actions.append(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(share, 'launch', 'slam.launch.py')),
-            launch_arguments=args.items()))
-    actions.append(IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(share, 'launch', 'nav2.launch.py')),
-        launch_arguments=args.items()))
+            PythonLaunchDescriptionSource(
+                os.path.join(clearpath_share, 'launch', 'slam.launch.py')),
+            launch_arguments={'setup_path': setup_path, 'use_sim_time': use_sim_time,
+                              'scan_topic': scan_topic}.items()))
+
+    clearpath_file = os.path.join(clearpath_share, 'config', platform_model(robot), 'nav2.yaml')
+    overrides_file = LaunchConfiguration('nav2_overrides').perform(context)
+    params, skipped = build_params(load_yaml(clearpath_file), load_yaml(overrides_file),
+                                   scan_topic, diff_drive=is_diff_drive(robot), slam=slam)
+    params_file = write_params(params, namespace)
+    actions.append(LogInfo(msg=f'Nav2 parameters: {clearpath_file} + {overrides_file} '
+                               f'-> {params_file}'))
+    for key in skipped:
+        actions.append(LogInfo(msg=f'Clearpath launch setting not in {clearpath_file}, '
+                                   f'skipped: {key}'))
+
+    navigation = os.path.join(get_package_share_directory('nav2_bringup'), 'launch',
+                              'navigation_launch.py')
+    actions.append(GroupAction([
+        PushRosNamespace(namespace),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(navigation),
+            launch_arguments={
+                'namespace': namespace,
+                'use_sim_time': use_sim_time,
+                'params_file': params_file,
+                'autostart': 'true',
+                'use_composition': 'False',
+                'use_respawn': 'false',
+                'log_level': 'info',
+            }.items()),
+    ]))
     return actions
 
 
@@ -73,5 +119,7 @@ def generate_launch_description():
                               description='Build a map with SLAM while navigating'),
         DeclareLaunchArgument('scan_topic', default_value='',
                               description='Scan topic; empty picks one from robot.yaml'),
+        DeclareLaunchArgument('nav2_overrides', default_value=default_overrides(),
+                              description="Bird Nose's changes to Clearpath's Nav2 parameters"),
         OpaqueFunction(function=_launch_nav),
     ])
