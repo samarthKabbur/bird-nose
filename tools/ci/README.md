@@ -9,6 +9,7 @@ Scripts that the CI workflows run, written so that you can run the same check yo
 | Path | What it does | Where it runs |
 | --- | --- | --- |
 | `check_docs.py` | Checks that the docs still match the code (see below) | Host or container; needs only Python 3 and Git |
+| `diff_params.py` | Lists every parameter that differs between two ROS parameter files, such as Clearpath's Nav2 file and the one Bird Nose generates | Host or container; needs Python 3 and PyYAML |
 | `sim_smoke.sh` | Starts the simulation without a window, starts Nav2 with SLAM, sends one goal, and passes if the robot reaches it | Inside the dev container |
 
 ## Usage
