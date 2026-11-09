@@ -7,7 +7,7 @@ the two:
 
 1. Load Clearpath's parameter file for the robot's platform.
 2. Apply the adjustments Clearpath's own nav2.launch.py makes for the
-   robot (scan topic, drive type, SLAM or static map); see
+   robot (scan topic, drive type, rolling or whole-map global costmap); see
    clearpath_rewrites().
 3. Merge Bird Nose's overrides on top.
 
@@ -38,19 +38,21 @@ def load_yaml(path):
         return yaml.safe_load(f) or {}
 
 
-def clearpath_rewrites(scan_topic, diff_drive, slam):
+def clearpath_rewrites(scan_topic, diff_drive, rolling_global_costmap):
     """
     Return the parameter changes Clearpath's nav2.launch.py makes.
 
-    Keys are dotted paths into the parameter file.
+    Keys are dotted paths into the parameter file. Clearpath's launch file
+    keeps the rolling global costmap only when its slam argument is true;
+    rolling_global_costmap is that choice, made explicit.
     """
     rewrites = {param: scan_topic for param in SCAN_TOPIC_PARAMS}
     if diff_drive:
         rewrites[MOTION_MODEL_PARAM] = 'DiffDrive'
         # The twirling critic penalizes rotation, which a diff-drive robot needs to steer.
         rewrites[TWIRLING_CRITIC_PARAM] = False
-    if not slam:
-        # With a saved map, the static layer sizes the global costmap to the whole map.
+    if not rolling_global_costmap:
+        # The static layer then sizes the global costmap to the whole map.
         rewrites[GLOBAL_ROLLING_WINDOW_PARAM] = False
     return rewrites
 
@@ -90,7 +92,8 @@ def deep_merge(base, overrides):
     return merged
 
 
-def build_params(clearpath_params, overrides, scan_topic, diff_drive=True, slam=True):
+def build_params(clearpath_params, overrides, scan_topic, diff_drive=True,
+                 rolling_global_costmap=False):
     """
     Return (params, skipped).
 
@@ -99,7 +102,8 @@ def build_params(clearpath_params, overrides, scan_topic, diff_drive=True, slam=
     changes name that this parameter file does not have.
     """
     params = copy.deepcopy(clearpath_params)
-    skipped = [key for key, value in clearpath_rewrites(scan_topic, diff_drive, slam).items()
+    rewrites = clearpath_rewrites(scan_topic, diff_drive, rolling_global_costmap)
+    skipped = [key for key, value in rewrites.items()
                if not set_existing(params, key, value)]
     return deep_merge(params, overrides), skipped
 

@@ -80,7 +80,7 @@ Clearpath's generators write launch and parameter files next to `robot.yaml`. Mo
 ## Limitations
 
 - `nav2.launch.py` reproduces what Clearpath's `nav2.launch.py` does to its parameters (scan topic, drive type, rolling or static global costmap) so it can add Bird Nose's changes. If Clearpath changes that file, compare it with `clearpath_rewrites()` in `bird_nose_navigation`. Composition (all Nav2 nodes in one process) is not offered; Clearpath's launch file has it off by default too.
-- With SLAM, the global costmap is a 20 m by 20 m window that moves with the robot (Clearpath's setting), so a goal more than about 10 m away is outside it and cannot be planned. Survey stops every 20 ft stay well inside.
+- The global costmap always covers the whole map, also with SLAM, as in every Phase 2 and 3 run. Clearpath's file would make it a 20 m by 20 m window around the robot when SLAM is on, which leaves goals more than about 10 m away unplannable.
 - The simulated Ouster scan works with SLAM and Nav2 as-is: it is one ring of 1024 points from −π to +π at about 11.5 Hz (first Phase 2 run, 2026-11-06). The physical Ouster's driver may publish differently; check in Phase 5.
 
 ## See also

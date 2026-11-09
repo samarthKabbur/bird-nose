@@ -19,7 +19,7 @@ Package type: `ament_cmake` with a Python module (`ament_cmake_python`).
 `bird_nose_bringup nav2.launch.py` builds Nav2's parameters on every launch:
 
 1. Clearpath's file for the platform: `clearpath_nav2_demos/config/a200/nav2.yaml` in the installed package.
-2. The changes Clearpath's own launch file makes: scan topic, diff-drive motion model, and a rolling or static global costmap.
+2. The changes Clearpath's own launch file makes: scan topic and diff-drive motion model, and a global costmap that covers the whole map rather than a 20 m window around the robot (what Clearpath's launch file did for every earlier Bird Nose run).
 3. `config/nav2_overrides.yaml` from this package, merged on top. Nested keys merge one by one; a list replaces the whole list.
 
 The result is written to `/tmp/bird_nose_nav2_<namespace>.yaml`, and the launch log prints the path. Open it to see exactly what Nav2 received:

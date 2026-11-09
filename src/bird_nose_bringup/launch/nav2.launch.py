@@ -81,8 +81,14 @@ def _launch_nav(context):
 
     clearpath_file = os.path.join(clearpath_share, 'config', platform_model(robot), 'nav2.yaml')
     overrides_file = LaunchConfiguration('nav2_overrides').perform(context)
+    # The global costmap covers the whole map, also with SLAM. This is what
+    # every Phase 2 and 3 run used: Clearpath's nav2.launch.py turns the
+    # rolling window off unless its slam argument is set, and Bird Nose never
+    # set it. Clearpath's rolling window is only 20 m across, too small for
+    # survey routes.
     params, skipped = build_params(load_yaml(clearpath_file), load_yaml(overrides_file),
-                                   scan_topic, diff_drive=is_diff_drive(robot), slam=slam)
+                                   scan_topic, diff_drive=is_diff_drive(robot),
+                                   rolling_global_costmap=False)
     params_file = write_params(params, namespace)
     actions.append(LogInfo(msg=f'Nav2 parameters: {clearpath_file} + {overrides_file} '
                                f'-> {params_file}'))

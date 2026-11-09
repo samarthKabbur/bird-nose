@@ -37,7 +37,7 @@ def test_overrides_file_raises_server_timeout():
 def test_build_applies_clearpath_rewrites_then_overrides(clearpath):
     """Scan topics, drive type, and overrides all land; other values stay."""
     params, skipped = build_params(clearpath, load_yaml(OVERRIDES), SCAN, diff_drive=True,
-                                   slam=True)
+                                   rolling_global_costmap=True)
     assert skipped == []
     bt = params['bt_navigator']['ros__parameters']
     assert bt['default_server_timeout'] == 200
@@ -49,9 +49,9 @@ def test_build_applies_clearpath_rewrites_then_overrides(clearpath):
     assert params['global_costmap']['global_costmap']['ros__parameters']['rolling_window']
 
 
-def test_static_map_turns_off_rolling_window(clearpath):
-    """Without SLAM, the global costmap covers the whole saved map."""
-    params, _ = build_params(clearpath, {}, SCAN, slam=False)
+def test_default_global_costmap_covers_whole_map(clearpath):
+    """By default the global costmap is not a rolling window."""
+    params, _ = build_params(clearpath, {}, SCAN)
     assert params['global_costmap']['global_costmap']['ros__parameters']['rolling_window'] is False
 
 

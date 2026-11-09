@@ -116,6 +116,15 @@ log "building the workspace"
 source "$WS/install/setup.bash"
 set -u
 
+# Another simulation or Nav2 on the same ROS domain would share node names,
+# /clock, and tf with this one and corrupt the test, so start only when the
+# domain is empty. (The self-hosted workflow uses its own domain, 43.)
+others="$(timeout 20 ros2 node list --no-daemon 2>/dev/null || true)"
+if [[ -n "$others" ]]; then
+  echo "$others" | head -n 10
+  fail "ROS domain $ROS_DOMAIN_ID already has running nodes (above). Stop them, or run with another domain, e.g. ROS_DOMAIN_ID=44 tools/ci/sim_smoke.sh"
+fi
+
 NS="$(python3 -c 'import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))["system"]["ros2"]["namespace"])' "$ROBOT_YAML")"
 log "robot namespace: $NS"
 
