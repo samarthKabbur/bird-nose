@@ -66,7 +66,10 @@ def evaluate(events, scenario):
         by_kind.setdefault(e['event'], []).append(e)
     started = by_kind.get('started', [])
     finished = by_kind.get('finished', [])
-    stop_count = started[0]['stop_count'] if started else 0
+    # The survey reports its stop count when it starts, and also when it
+    # finishes, including a survey that ended before it could start.
+    planned = started or finished
+    stop_count = planned[0]['stop_count'] if planned else 0
     survey = scenario['survey']
     expected_stops = len(stops_along_route(route_in_map(scenario), survey['stop_spacing_m']))
     reached = sorted({e['stop_index'] for e in by_kind.get('arrived', [])})
@@ -75,6 +78,7 @@ def evaluate(events, scenario):
     metrics = {
         'survey_started': bool(started),
         'survey_finished': bool(finished),
+        'survey_result': finished[-1]['detail'] if finished else 'no finished event',
         'stop_count': stop_count,
         'expected_stop_count': expected_stops,
         'stops_reached': len(reached),
@@ -87,6 +91,8 @@ def evaluate(events, scenario):
     }
 
     checks = [
+        {'name': 'survey started', 'expected': True, 'actual': metrics['survey_started'],
+         'passed': metrics['survey_started']},
         {'name': 'survey finished', 'expected': True, 'actual': metrics['survey_finished'],
          'passed': metrics['survey_finished']},
         {'name': 'stops planned as the scenario says', 'expected': expected_stops,
@@ -133,6 +139,7 @@ def write_report(out_dir, scenario, bag_dir, metrics, checks):
         f"- Stops reached: {metrics['stops_reached']} of {metrics['stop_count']} "
         f"({metrics['stops_reached_after_retry']} needed a second goal)",
         f"- Survey time: {metrics['duration_s']} s (simulation time)",
+        f"- Survey's own summary: {metrics['survey_result']}",
         '',
         '| Check | Expected | Actual | Result |',
         '| --- | --- | --- | --- |',

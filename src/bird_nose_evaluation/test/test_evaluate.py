@@ -49,6 +49,15 @@ def test_unfinished_survey_fails():
     assert not overall(checks)
 
 
+def test_survey_that_never_started_says_why():
+    """A survey that gave up waiting for Nav2 fails, and its reason is kept."""
+    events = [event('finished', count=2, detail='Nav2 never became active, or no map arrived')]
+    metrics, checks = evaluate(events, SCENARIO)
+    assert metrics['stop_count'] == 2
+    assert 'Nav2 never became active' in metrics['survey_result']
+    assert [c['passed'] for c in checks if c['name'] == 'survey started'] == [False]
+
+
 def test_wrong_stop_count_fails():
     """The survey must plan the stops the scenario implies."""
     events = [event('started', count=3), event('finished', count=3)]
