@@ -35,7 +35,7 @@ robot_start: {x: 0.0, y: -8.8, yaw: 0.0} # required; spawn pose
 seed: 1                                 # required; integer, recorded with the run
 survey:                                 # required
   waypoints: [[0.0, -8.8], [24.4, -8.8]] # at least two points; the first within 0.5 m of robot_start
-  stop_every_ft: 20                     # stop spacing along the route, feet
+  stop_every_ft: 20                     # stop spacing along the route, feet; at most 30 (about 9 m)
   record_s: 10                          # time at each stop, simulation seconds
 birds: []                               # optional; used from step 4.2 (species, x, y, z, clip, ...)
 noise: {}                               # optional; used from step 4.2

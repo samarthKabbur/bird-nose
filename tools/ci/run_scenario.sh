@@ -43,6 +43,13 @@ log "building the workspace"
 source "$WS/install/setup.bash"
 set -u
 
+# Gazebo's server is not a ROS node, so check for it separately: a leftover
+# simulation would keep publishing its own clock and robot.
+if pgrep -f 'gz sim' > /dev/null; then
+  pgrep -af 'gz sim' | head -n 5
+  echo "A Gazebo simulation is already running (above). Stop it first: pkill -f 'gz sim'" >&2
+  exit 2
+fi
 others="$(timeout 20 ros2 node list --no-daemon 2>/dev/null || true)"
 if [[ -n "$others" ]]; then
   echo "$others" | head -n 10

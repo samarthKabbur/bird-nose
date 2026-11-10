@@ -119,6 +119,11 @@ set -u
 # Another simulation or Nav2 on the same ROS domain would share node names,
 # /clock, and tf with this one and corrupt the test, so start only when the
 # domain is empty. (The self-hosted workflow uses its own domain, 43.)
+# Gazebo's server is not a ROS node, so check for it separately.
+if pgrep -f 'gz sim' > /dev/null; then
+  pgrep -af 'gz sim' | head -n 5
+  fail "a Gazebo simulation is already running (above). Stop it first: pkill -f 'gz sim'"
+fi
 others="$(timeout 20 ros2 node list --no-daemon 2>/dev/null || true)"
 if [[ -n "$others" ]]; then
   echo "$others" | head -n 10

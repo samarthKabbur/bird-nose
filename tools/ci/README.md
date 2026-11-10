@@ -33,7 +33,7 @@ SIM_HEADLESS=true tools/ci/run_scenario.sh       # without the window (needs GPU
 SEED=7 tools/ci/run_scenario.sh orchard_nav_survey
 ```
 
-`run_scenario.sh` writes the launch log to `data/reports/scenario_logs/`, the recording to `data/bags/`, and the report to `data/reports/<recording>/`. Like `sim_smoke.sh`, it refuses ROS domain 0, discovery wider than localhost, and a domain that already has nodes running.
+`run_scenario.sh` writes the launch log to `data/reports/scenario_logs/`, the recording to `data/bags/`, and the report to `data/reports/<recording>/`. Like `sim_smoke.sh`, it refuses ROS domain 0, discovery wider than localhost, a domain that already has nodes running, and a Gazebo simulation that is already running (Gazebo's server is not a ROS node, so `ros2 node list` does not show it).
 
 `check_docs.py` checks:
 

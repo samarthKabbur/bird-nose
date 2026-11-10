@@ -17,6 +17,9 @@ import yaml
 
 FORMAT = 1
 FEET_TO_M = 0.3048
+# Survey goals must stay inside Nav2's rolling global costmap (20 m wide with
+# SLAM), so stops may be at most this far apart.
+MAX_STOP_SPACING_M = 9.0
 
 REQUIRED_KEYS = ('format', 'name', 'world', 'robot_start', 'seed', 'survey', 'timeout_s',
                  'checks')
@@ -81,8 +84,11 @@ def _check(data, stem):
                 problems.append('survey.waypoints must be a list of at least two [x, y] pairs')
             elif start and math.dist(points[0], (start['x'], start['y'])) > 0.5:
                 problems.append('survey.waypoints must start within 0.5 m of robot_start')
-            if not (_is_number(survey.get('stop_every_ft')) and survey['stop_every_ft'] > 0):
-                problems.append('survey.stop_every_ft must be a positive number of feet')
+            spacing = survey.get('stop_every_ft')
+            if not (_is_number(spacing) and 0 < spacing * FEET_TO_M <= MAX_STOP_SPACING_M):
+                problems.append(f'survey.stop_every_ft must be more than 0 and at most '
+                                f'{MAX_STOP_SPACING_M / FEET_TO_M:.0f} ft (Nav2 plans within '
+                                f'about 10 m of the robot with SLAM)')
             if not (_is_number(survey.get('record_s')) and survey['record_s'] >= 0):
                 problems.append('survey.record_s must be a number of seconds, 0 or more')
             for key in survey:

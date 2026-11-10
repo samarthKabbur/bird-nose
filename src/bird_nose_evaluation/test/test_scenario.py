@@ -56,6 +56,13 @@ def test_route_must_start_at_robot(tmp_path):
         load_scenario(write(tmp_path, bad))
 
 
+def test_stop_spacing_beyond_rolling_costmap_is_rejected(tmp_path):
+    """Stops more than 9 m apart would fall outside Nav2's 20 m planning window."""
+    bad = dict(VALID, survey=dict(VALID['survey'], stop_every_ft=40))
+    with pytest.raises(ScenarioError, match='at most 30 ft'):
+        load_scenario(write(tmp_path, bad))
+
+
 def test_world_to_map_uses_start_pose(tmp_path):
     """The start pose maps to the origin, and yaw rotates the axes."""
     scenario = load_scenario(write(tmp_path, dict(
