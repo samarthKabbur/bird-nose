@@ -16,7 +16,8 @@ def test_events_are_read_in_order(tmp_path):
                 rosbag2_py.ConverterOptions('cdr', 'cdr'))
     topic = '/robot/bird_nose/survey_events'
     writer.create_topic(rosbag2_py.TopicMetadata(
-        name=topic, type='bird_nose_interfaces/msg/SurveyEvent', serialization_format='cdr'))
+        id=0, name=topic, type='bird_nose_interfaces/msg/SurveyEvent',
+        serialization_format='cdr'))
     for i, kind in enumerate(['started', 'arrived', 'finished']):
         msg = interfaces.SurveyEvent(event=kind, stop_index=0, stop_count=1, detail=str(i))
         msg.header.stamp.sec = 10 * i
