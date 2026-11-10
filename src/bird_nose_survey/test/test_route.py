@@ -13,6 +13,13 @@ def test_straight_route_stops_every_spacing_and_at_end():
     assert all(y == 0 and yaw == 0 for _, y, yaw in stops)
 
 
+def test_end_merges_with_a_stop_just_before_it():
+    """An 80 ft stop on a 24.4 m route moves to the end rather than adding a fifth."""
+    stops = stops_along_route([(0, 0), (24.4, 0)], 20 * FEET_TO_M)
+    assert len(stops) == 4
+    assert stops[-1][0] == pytest.approx(24.4)
+
+
 def test_end_not_duplicated_when_spacing_divides_route():
     """Four 20 ft stops on an 80 ft route, not five."""
     length = 80 * FEET_TO_M

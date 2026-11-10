@@ -48,7 +48,8 @@ Reads `bird_nose/survey_events` (`bird_nose_interfaces/msg/SurveyEvent`) from re
 | `stop_count` | Stops the survey planned (from its `started` event) |
 | `expected_stop_count` | Stops the scenario's route and spacing imply, computed independently |
 | `stops_reached` | Distinct stops with an `arrived` event |
-| `nav_failures`, `failures` | `failed` events, with Nav2's reason |
+| `nav_failures`, `failures` | Stops the survey gave up on, with Nav2's status for each attempt |
+| `stops_reached_after_retry` | Stops reached only on a second (or later) goal |
 | `duration_s` | Simulation time from `started` to `finished` |
 
 Always checked: the survey finished, and it planned the expected number of stops. Checked when the scenario lists them: `stops_reached` (`all` or a number) and `max_nav_failures`. Checks for later steps (`species_found`, `max_location_error_ft`, …) are accepted in scenario files and reported as "not evaluated" until their step adds them; they do not change the result.

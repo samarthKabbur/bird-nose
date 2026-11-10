@@ -8,7 +8,7 @@ Scenario files: each one describes a simulated run completely (world, start pose
 
 | File | What it tests |
 | --- | --- |
-| `orchard_nav_survey.yaml` | Navigation only: four 20 ft stops down one aisle of Clearpath's orchard world |
+| `orchard_nav_survey.yaml` | Navigation only: four 20 ft stops along the open south edge of Clearpath's orchard world |
 
 ## Usage
 
@@ -31,10 +31,10 @@ format: 1                               # required; this README describes versio
 name: orchard_nav_survey                # required; must equal the file name
 description: One line for reports       # optional
 world: orchard                          # required; a clearpath_gz world
-robot_start: {x: 0.0, y: 1.4, yaw: 0.0} # required; spawn pose
+robot_start: {x: 0.0, y: -8.8, yaw: 0.0} # required; spawn pose
 seed: 1                                 # required; integer, recorded with the run
 survey:                                 # required
-  waypoints: [[0.0, 1.4], [24.4, 1.4]]  # at least two points; the first within 0.5 m of robot_start
+  waypoints: [[0.0, -8.8], [24.4, -8.8]] # at least two points; the first within 0.5 m of robot_start
   stop_every_ft: 20                     # stop spacing along the route, feet
   record_s: 10                          # time at each stop, simulation seconds
 birds: []                               # optional; used from step 4.2 (species, x, y, z, clip, ...)
@@ -55,6 +55,7 @@ Unknown keys are errors, so a typo is caught before a run. Checks for later step
 
 ## Limitations
 
+- Routes between the orchard's rows are not usable yet: branches hang into the aisles from about 0.4 m, above the Ouster's single scan ring, so Nav2 does not see what the robot's top would hit. That needs 3D obstacle sensing (see the living doc).
 - Navigation only for now: `birds` and `noise` are accepted but unused until step 4.2.
 - One robot, `config/robots/husky-a200/robot.yaml`.
 

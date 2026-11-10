@@ -2,8 +2,10 @@
 Survey node: drive a route through Nav2, stopping at each survey stop.
 
 The route comes in as parameters (map frame). The node waits until Nav2 is
-active, sends one NavigateToPose goal per stop, waits at each stop it
-reaches, and reports every step as a SurveyEvent on bird_nose/survey_events.
+active and SLAM has published a map, sends NavigateToPose goals stop by
+stop (retrying a failed stop up to max_attempts times), waits at each stop
+it reaches, and reports every step as a SurveyEvent on
+bird_nose/survey_events.
 When the survey is over it exits, which lets scenario.launch.py shut the
 run down.
 
@@ -19,7 +21,8 @@ from bird_nose_survey.route import stops_along_route, yaw_to_quaternion
 from geometry_msgs.msg import Pose
 from lifecycle_msgs.srv import GetState
 from nav2_msgs.action import NavigateToPose
-from rcl_interfaces.msg import FloatingPointRange, ParameterDescriptor
+from nav_msgs.msg import OccupancyGrid
+from rcl_interfaces.msg import FloatingPointRange, IntegerRange, ParameterDescriptor
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
@@ -69,12 +72,28 @@ class SurveyNode(Node):
             _float_param('Wall-clock seconds allowed to reach one stop before giving up',
                          10.0, 1800.0))
         self.declare_parameter(
+            'max_attempts', 2,
+            ParameterDescriptor(
+                description='Goals sent to one stop before it counts as failed (1 = no retry)',
+                read_only=True,
+                integer_range=[IntegerRange(from_value=1, to_value=5, step=1)]))
+        self.declare_parameter(
             'nav2_timeout_s', 300.0,
             _float_param('Wall-clock seconds to wait for Nav2 to become active', 10.0, 1800.0))
 
         self._events = self.create_publisher(SurveyEvent, 'bird_nose/survey_events', EVENT_QOS)
         self._navigate = ActionClient(self, NavigateToPose, 'navigate_to_pose')
         self._bt_state = self.create_client(GetState, 'bt_navigator/get_state')
+        # SLAM publishes the map with transient local durability, so this gets
+        # the latest map even if it was published before the subscription.
+        self._have_map = False
+        self.create_subscription(
+            OccupancyGrid, 'map', self._on_map,
+            QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                       durability=DurabilityPolicy.TRANSIENT_LOCAL))
+
+    def _on_map(self, _msg):
+        self._have_map = True
 
     def _param(self, name):
         return self.get_parameter(name).value
@@ -100,14 +119,18 @@ class SurveyNode(Node):
         return future.done()
 
     def wait_for_nav2(self):
-        """Return True once bt_navigator reports the active state."""
+        """Return True once bt_navigator is active and SLAM has published a map."""
         deadline = time.monotonic() + self._param('nav2_timeout_s')
+        active = False
         while time.monotonic() < deadline:
-            if self._bt_state.wait_for_service(timeout_sec=2.0):
+            if not active and self._bt_state.wait_for_service(timeout_sec=2.0):
                 future = self._bt_state.call_async(GetState.Request())
-                if self._wait(future, 5.0) and future.result().current_state.label == 'active':
-                    return self._navigate.wait_for_server(timeout_sec=10.0)
-            rclpy.spin_once(self, timeout_sec=3.0)
+                active = (self._wait(future, 5.0)
+                          and future.result().current_state.label == 'active'
+                          and self._navigate.wait_for_server(timeout_sec=10.0))
+            if active and self._have_map:
+                return True
+            rclpy.spin_once(self, timeout_sec=1.0)
         return False
 
     def _goto(self, pose):
@@ -143,10 +166,10 @@ class SurveyNode(Node):
         stops = stops_along_route(points, self._param('stop_spacing_m'))
         count = len(stops)
 
-        self.get_logger().info('waiting for Nav2 to become active')
+        self.get_logger().info('waiting for Nav2 to become active and for a SLAM map')
         if not self.wait_for_nav2():
             self._publish(SurveyEvent.FINISHED, stop_count=count,
-                          detail='Nav2 never became active')
+                          detail='Nav2 never became active, or no map arrived')
             return 1
 
         self._publish(SurveyEvent.STARTED, stop_count=count)
@@ -155,12 +178,18 @@ class SurveyNode(Node):
             pose = Pose()
             pose.position.x, pose.position.y = x, y
             pose.orientation.z, pose.orientation.w = yaw_to_quaternion(yaw)
-            status = self._goto(pose)
-            if status != 'SUCCEEDED':
-                self._publish(SurveyEvent.FAILED, index, count, pose, status)
+            attempts = []
+            while len(attempts) < self._param('max_attempts'):
+                attempts.append(self._goto(pose))
+                if attempts[-1] == 'SUCCEEDED':
+                    break
+            history = ', '.join(attempts)
+            if attempts[-1] != 'SUCCEEDED':
+                self._publish(SurveyEvent.FAILED, index, count, pose, history)
                 continue
             reached += 1
-            self._publish(SurveyEvent.ARRIVED, index, count, pose)
+            self._publish(SurveyEvent.ARRIVED, index, count, pose,
+                          f'attempts: {history}' if len(attempts) > 1 else '')
             dwell = self._param('dwell_s')
             self._dwell(dwell)
             self._publish(SurveyEvent.RECORDED, index, count, pose, f'waited {dwell:g} s')

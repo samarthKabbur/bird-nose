@@ -18,12 +18,14 @@ def event(kind, index=0, count=2, time_s=0.0, detail=''):
 
 def test_complete_survey_passes():
     """Both stops reached, no failures: every evaluated check passes."""
-    events = [event('started'), event('arrived', 0, time_s=10), event('recorded', 0),
+    events = [event('started'), event('arrived', 0, time_s=10, detail='attempts: ABORTED, '
+                                      'SUCCEEDED'), event('recorded', 0),
               event('arrived', 1, time_s=20), event('recorded', 1),
               event('finished', time_s=30)]
     metrics, checks = evaluate(events, SCENARIO)
     assert metrics['stops_reached'] == 2
     assert metrics['duration_s'] == pytest.approx(30.0)
+    assert metrics['stops_reached_after_retry'] == 1
     assert overall(checks)
     planned = [c for c in checks if c['name'] == 'species_found'][0]
     assert planned['passed'] is None

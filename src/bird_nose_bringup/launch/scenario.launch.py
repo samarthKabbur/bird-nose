@@ -85,6 +85,7 @@ def _launch_scenario(context):
             'route_xy': route,
             'stop_spacing_m': scenario['survey']['stop_spacing_m'],
             'dwell_s': float(scenario['survey']['record_s']),
+            'max_attempts': 2,
         }])
 
     def after_sim_ready(event, _context):

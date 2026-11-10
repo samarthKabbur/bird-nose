@@ -3,12 +3,15 @@ Turn a route into survey stops.
 
 A route is a list of (x, y) points in metres. The robot stops every
 spacing_m metres measured along the route, and always at the route's end.
+When the end is less than END_MERGE_M past the last regular stop, that stop
+moves to the end instead of adding a second stop a few centimetres away.
 Each stop faces along the route at that point, so the robot arrives already
 pointing toward the next stop.
 """
 import math
 
 FEET_TO_M = 0.3048
+END_MERGE_M = 0.5
 
 
 def route_length(points):
@@ -20,9 +23,9 @@ def stops_along_route(points, spacing_m):
     """
     Return the survey stops as a list of (x, y, yaw) tuples.
 
-    Stops fall every spacing_m along the route, plus one at the end unless
-    the last regular stop is already within 1 cm of it. The start point is
-    not a stop: the robot is already there.
+    Stops fall every spacing_m along the route, plus one at the end; a
+    regular stop less than END_MERGE_M before the end is moved to the end.
+    The start point is not a stop: the robot is already there.
     """
     if len(points) < 2:
         raise ValueError('a route needs at least two points')
@@ -36,7 +39,7 @@ def stops_along_route(points, spacing_m):
 
     distances = []
     d = spacing_m
-    while d < total - 0.01:
+    while d < total - END_MERGE_M:
         distances.append(d)
         d += spacing_m
     distances.append(total)

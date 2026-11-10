@@ -79,6 +79,8 @@ def evaluate(events, scenario):
         'expected_stop_count': expected_stops,
         'stops_reached': len(reached),
         'nav_failures': len(failures),
+        'stops_reached_after_retry': sum(1 for e in by_kind.get('arrived', [])
+                                         if e['detail'].startswith('attempts:')),
         'failures': [f"stop {e['stop_index'] + 1}: {e['detail']}" for e in failures],
         'duration_s': (round(finished[-1]['time_s'] - started[0]['time_s'], 1)
                        if started and finished else None),
@@ -128,7 +130,8 @@ def write_report(out_dir, scenario, bag_dir, metrics, checks):
         '',
         f'- Recording: `{bag_dir}`',
         f"- Seed: {scenario['seed']}",
-        f"- Stops reached: {metrics['stops_reached']} of {metrics['stop_count']}",
+        f"- Stops reached: {metrics['stops_reached']} of {metrics['stop_count']} "
+        f"({metrics['stops_reached_after_retry']} needed a second goal)",
         f"- Survey time: {metrics['duration_s']} s (simulation time)",
         '',
         '| Check | Expected | Actual | Result |',
