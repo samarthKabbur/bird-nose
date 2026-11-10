@@ -56,8 +56,10 @@ launch_log="$LOGS/$(date -u +%Y%m%dT%H%M%SZ)_${SCENARIO//[^A-Za-z0-9_-]/_}.log"
 marker="$(mktemp)"
 log "running scenario $SCENARIO (headless: $SIM_HEADLESS); launch log: ${launch_log#"$WS"/}"
 set +e
-ros2 launch bird_nose_bringup scenario.launch.py scenario:="$SCENARIO" \
-  headless:="$SIM_HEADLESS" seed:="${SEED:-}" > "$launch_log" 2>&1
+# ros2 launch rejects an empty value (seed:=), so pass seed only when set.
+launch_args=(scenario:="$SCENARIO" headless:="$SIM_HEADLESS")
+[[ -n "${SEED:-}" ]] && launch_args+=(seed:="$SEED")
+ros2 launch bird_nose_bringup scenario.launch.py "${launch_args[@]}" > "$launch_log" 2>&1
 launch_status=$?
 set -e
 grep -E 'Scenario ending|Scenario [a-z_]+ \(seed' "$launch_log" || true
