@@ -90,4 +90,21 @@ set +e
 ros2 run bird_nose_evaluation evaluate_run "$bag" --scenario "$SCENARIO"
 status=$?
 set -e
+
+# Signs the computer could not keep up, which the recording does not show:
+# drive commands the wheel controller rejected as stale, and Nav2 control
+# loops that ran late. Added to the report so a lucky pass under load shows.
+stale="$(grep -c 'Ignoring the received message' "$launch_log" || true)"
+late="$(grep -c 'Control loop missed its desired rate' "$launch_log" || true)"
+report="$WS/data/reports/$(basename "$bag")/report.md"
+if [[ -f "$report" ]]; then
+  {
+    echo
+    echo "Load (from the launch log, ${launch_log#"$WS"/}):"
+    echo
+    echo "- Drive commands rejected by the wheel controller as stale: $stale"
+    echo "- Nav2 control loops that missed 20 Hz: $late"
+  } >> "$report"
+fi
+log "drive commands rejected as stale: $stale; late Nav2 control loops: $late"
 exit "$status"

@@ -11,7 +11,7 @@ Package type: `ament_cmake`, launch files only.
 | File | What it starts |
 | --- | --- |
 | `launch/sim.launch.py` | Copies `robot.yaml` into a scratch setup folder, then runs `clearpath_gz simulation.launch.py` from it |
-| `launch/nav2.launch.py` | SLAM (Clearpath's `slam.launch.py`) and Nav2 (Nav2's `navigation_launch.py`) against that setup folder, with Clearpath's Nav2 parameters plus Bird Nose's changes |
+| `launch/nav2.launch.py` | SLAM (Clearpath's `slam.launch.py`, brought up by a retrying lifecycle manager), then Nav2 (Nav2's `navigation_launch.py`) once SLAM publishes a map, with Clearpath's Nav2 parameters plus Bird Nose's changes |
 | `launch/rviz.launch.py` | Clearpath's navigation RViz view, with the namespace read from `robot.yaml` |
 | `launch/scenario.launch.py` | One scenario end to end: simulation, then Nav2 and the survey once the simulation publishes, plus recording; stops when the survey ends |
 
@@ -79,6 +79,15 @@ These launch files add no nodes of their own. The simulated robot publishes Clea
 
 - The robot comes from [`config/robots/husky-a200/robot.yaml`](../../config/robots/README.md).
 - Every terminal and container must share `ROS_DOMAIN_ID` (42 for simulation) and `RMW_IMPLEMENTATION`; the dev container sets both.
+
+## Why start-up is staged
+
+`nav2.launch.py` starts in two stages instead of all at once:
+
+1. **SLAM, managed.** Clearpath's `slam.launch.py` runs with `autostart:=false`, and a Nav2 lifecycle manager, `lifecycle_manager_slam_toolbox`, configures and activates `slam_toolbox` and `map_saver`. The manager waits for each node's services and retries. slam_toolbox's own autostart sends a single configure request at launch and gives up if the node is still busy, which left SLAM off for a whole run when everything started at once on hero.
+2. **Nav2, after the first map.** `wait_for_topics` waits for `/<namespace>/map` (up to 180 s), then Nav2 starts. Nav2's global costmap needs the `map` frame to activate; started earlier, it can time out and Nav2's lifecycle manager aborts the whole bring-up.
+
+> **Side note: why staging beats longer timeouts.** Starting everything at once creates a burst of load just when every node is waiting on every other, so timeouts trip at random. Waiting for evidence that the previous stage works (a published map) removes the race instead of hoping a bigger timeout is big enough.
 
 ## Why Nav2 is pointed at the Ouster
 
