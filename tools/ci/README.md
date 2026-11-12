@@ -60,6 +60,7 @@ It refuses to start while other ROS nodes are running on the same domain, becaus
 ## Limitations
 
 - Without a window, Gazebo still renders the Ouster's simulated scan, but it picks the first graphics card it finds rather than the one your desktop uses. On a laptop with both Intel and NVIDIA graphics, such as `hero`, it picks the NVIDIA card. Without the NVIDIA driver in the container, Gazebo then crashes with "Failed to create dummy render window", and the script prints a hint. Fixes: start the container with `GPU=1 ./tools/dev.sh` (needs the NVIDIA Container Toolkit on the host), or run with `SIM_HEADLESS=false` on a desktop. Computers with only Intel or AMD graphics are not affected.
+- With a window, the opposite applies: Gazebo and RViz render on the GPU that runs the desktop. On `hero` (PRIME on-demand) that is the Intel GPU, even with `GPU=1`, unless the PRIME render-offload variables in `containers/compose.nvidia.yaml` are set. They are, so with `GPU=1` both windows render on the NVIDIA card. The first windowed run in a new container is slower while the NVIDIA driver builds its shader cache. It can miss the Nav2 timeout; run it again.
 - It runs in the same container as everything else, so a simulation you already have running on the same ROS domain would interfere. The self-hosted workflow avoids this with domain 43.
 
 ## See also
