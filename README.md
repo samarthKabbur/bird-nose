@@ -108,7 +108,10 @@ Every module has a README with the same sections: Purpose, Contents, Usage, Inte
 | `src/bird_nose_description` | Bird Nose payloads (microphone modules, crossbar) in the robot model | [README](src/bird_nose_description/README.md) |
 | `src/bird_nose_navigation` | Nav2 parameters, maps, behavior trees | [README](src/bird_nose_navigation/README.md) |
 | `src/bird_nose_sim` | Gazebo worlds and scenario assets | [README](src/bird_nose_sim/README.md) |
-| `src/bird_nose_algorithms` | Bird Nose autonomy nodes | [README](src/bird_nose_algorithms/README.md) |
+| `src/bird_nose_interfaces` | Bird Nose messages and actions (the contract between packages) | [README](src/bird_nose_interfaces/README.md) |
+| `src/bird_nose_survey` | Survey behaviour: drive a route, stop every 20 ft | [README](src/bird_nose_survey/README.md) |
+| `src/bird_nose_evaluation` | Scenario files and run evaluation (metrics, pass or fail) | [README](src/bird_nose_evaluation/README.md) |
+| `src/bird_nose_algorithms` | Placeholder heartbeat node, removed as Phase 4 nodes replace it | [README](src/bird_nose_algorithms/README.md) |
 | `src/bird_nose_telemetry` | Foxglove Bridge and MCAP recording | [README](src/bird_nose_telemetry/README.md) |
 | `tools/` | Host scripts: `dev.sh`, `setup_env.sh` | [README](tools/README.md) |
 | `tools/ci/` | Scripts CI runs: docs check and simulation smoke test | [README](tools/ci/README.md) |

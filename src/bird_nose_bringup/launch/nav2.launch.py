@@ -5,6 +5,17 @@ Starts SLAM through Clearpath's slam.launch.py, then Nav2 through Nav2's own
 navigation_launch.py, both against the setup folder written by sim.launch.py
 and with simulation time.
 
+Start-up is staged so it does not depend on timing:
+
+1. SLAM starts with its own autostart off; a Nav2 lifecycle manager
+   (lifecycle_manager_slam_toolbox) configures and activates slam_toolbox
+   and the map saver, waiting for each to be ready. slam_toolbox's launch
+   file would otherwise send one configure request at start-up and give up
+   if the node was still busy, leaving SLAM off for the whole run
+   (2026-11-09, headless on hero).
+2. Nav2 starts once SLAM publishes a map, so its global costmap finds the
+   map frame as soon as it activates. Without SLAM, Nav2 starts at once.
+
 Nav2's parameters are Clearpath's for this platform, plus Bird Nose's
 changes in bird_nose_navigation/config/nav2_overrides.yaml (merged by
 bird_nose_navigation.nav2_params). This file replaces the include of
@@ -21,10 +32,11 @@ from ament_index_python.packages import get_package_share_directory
 from bird_nose_navigation.nav2_params import build_params, load_yaml, write_params
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, GroupAction, IncludeLaunchDescription,
-                            LogInfo, OpaqueFunction)
+                            LogInfo, OpaqueFunction, RegisterEventHandler)
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import PushRosNamespace
+from launch_ros.actions import Node, PushRosNamespace
 
 
 def default_setup_path():
@@ -77,18 +89,27 @@ def _launch_nav(context):
             PythonLaunchDescriptionSource(
                 os.path.join(clearpath_share, 'launch', 'slam.launch.py')),
             launch_arguments={'setup_path': setup_path, 'use_sim_time': use_sim_time,
-                              'scan_topic': scan_topic}.items()))
+                              'scan_topic': scan_topic, 'autostart': 'false',
+                              'use_lifecycle_manager': 'false'}.items()))
+        # Brings slam_toolbox and the map saver up, retrying until each is ready.
+        # bond_timeout 0 turns off the heartbeat these two nodes do not provide.
+        actions.append(Node(
+            package='nav2_lifecycle_manager', executable='lifecycle_manager',
+            name='lifecycle_manager_slam_toolbox', namespace=namespace, output='screen',
+            parameters=[{'autostart': True, 'node_names': ['slam_toolbox', 'map_saver'],
+                         'bond_timeout': 0.0, 'use_sim_time': use_sim_time == 'true'}]))
 
     clearpath_file = os.path.join(clearpath_share, 'config', platform_model(robot), 'nav2.yaml')
     overrides_file = LaunchConfiguration('nav2_overrides').perform(context)
-    # The global costmap covers the whole map, also with SLAM. This is what
-    # every Phase 2 and 3 run used: Clearpath's nav2.launch.py turns the
-    # rolling window off unless its slam argument is set, and Bird Nose never
-    # set it. Clearpath's rolling window is only 20 m across, too small for
-    # survey routes.
+    # With SLAM, the global costmap is Clearpath's 20 m window around the
+    # robot, as Clearpath intends. A costmap sized to the SLAM map only covers
+    # what the lidar has already hit; on open ground that is a few metres, so
+    # every survey goal fell outside it and Nav2 rejected it at once (orchard
+    # edge run, 2026-11-09). With a saved map (slam:=false), the costmap
+    # covers the whole map.
     params, skipped = build_params(load_yaml(clearpath_file), load_yaml(overrides_file),
                                    scan_topic, diff_drive=is_diff_drive(robot),
-                                   rolling_global_costmap=False)
+                                   rolling_global_costmap=slam)
     params_file = write_params(params, namespace)
     actions.append(LogInfo(msg=f'Nav2 parameters: {clearpath_file} + {overrides_file} '
                                f'-> {params_file}'))
@@ -98,7 +119,7 @@ def _launch_nav(context):
 
     navigation = os.path.join(get_package_share_directory('nav2_bringup'), 'launch',
                               'navigation_launch.py')
-    actions.append(GroupAction([
+    nav2 = GroupAction([
         PushRosNamespace(namespace),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(navigation),
@@ -111,8 +132,22 @@ def _launch_nav(context):
                 'use_respawn': 'false',
                 'log_level': 'info',
             }.items()),
-    ]))
-    return actions
+    ])
+    if not slam:
+        return actions + [nav2]
+
+    wait_for_map = Node(
+        package='bird_nose_survey', executable='wait_for_topics', output='screen',
+        arguments=['--timeout', '180', f'/{namespace}/map'])
+
+    def after_map(event, _context):
+        if event.returncode != 0:
+            return [LogInfo(msg='SLAM published no map within 180 s; starting Nav2 anyway, '
+                                'but expect it to fail to activate'), nav2]
+        return [LogInfo(msg='SLAM map received; starting Nav2'), nav2]
+
+    return actions + [wait_for_map, RegisterEventHandler(
+        OnProcessExit(target_action=wait_for_map, on_exit=after_map))]
 
 
 def generate_launch_description():

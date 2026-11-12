@@ -50,7 +50,7 @@ ros2 run bird_nose_telemetry record_run nav-test /clock /tf /tf_static \
 SCENARIO=empty-world SEED=7 ros2 run bird_nose_telemetry record_run empty-world-7
 ```
 
-Stop with Ctrl+C. The script then asks for one line of notes and the outcome, and writes `data/bags/<date>_<time>_<name>/` containing:
+Stop with Ctrl+C. When a launch file or Docker stops it instead (SIGINT or SIGTERM), it stops `ros2 bag` cleanly in the same way and skips the questions. In a terminal, the script then asks for one line of notes and the outcome, and writes `data/bags/<date>_<time>_<name>/` containing:
 
 | File | Contents |
 | --- | --- |

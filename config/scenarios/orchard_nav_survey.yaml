@@ -1,0 +1,32 @@
+# Navigation-only survey along the orchard's edge (Phase 4 step 4.1).
+#
+# Clearpath's orchard world has rows of trees every 3 m along the world x
+# axis, at y = -6.1, -3.1, -0.1, 2.9, ... The robot drives 24.4 m (80 ft)
+# along the open ground south of the first row (y = -8.8), stopping every
+# 20 ft: four stops. Trees are on one side, about 1.6 m from the robot's
+# path at the nearest branch.
+#
+# Why not between the rows: the aisles have branches and leaves from
+# 0.4 m up, which the Ouster's single-ring scan (at about 0.36 m) does not
+# see but the robot's top can hit (first run, 2026-11-09). Driving between
+# rows needs 3D obstacle sensing first; see the living doc's Phase 4 open
+# questions.
+#
+# There are no birds yet; the stop time is shortened from the memo's 30 s
+# to keep the run quick.
+
+format: 1
+name: orchard_nav_survey
+description: Four 20 ft stops along the orchard's south edge; navigation only
+world: orchard
+robot_start: {x: 0.0, y: -8.8, yaw: 0.0}  # world frame; metres, radians
+seed: 1
+survey:
+  waypoints: [[0.0, -8.8], [24.4, -8.8]]  # world frame, metres
+  stop_every_ft: 20
+  record_s: 10                            # time at each stop, simulation seconds
+birds: []
+timeout_s: 900                            # wall-clock limit for the whole run
+checks:
+  stops_reached: all
+  max_nav_failures: 0

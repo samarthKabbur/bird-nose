@@ -11,8 +11,9 @@ Package type: `ament_cmake`, launch files only.
 | File | What it starts |
 | --- | --- |
 | `launch/sim.launch.py` | Copies `robot.yaml` into a scratch setup folder, then runs `clearpath_gz simulation.launch.py` from it |
-| `launch/nav2.launch.py` | SLAM (Clearpath's `slam.launch.py`) and Nav2 (Nav2's `navigation_launch.py`) against that setup folder, with Clearpath's Nav2 parameters plus Bird Nose's changes |
+| `launch/nav2.launch.py` | SLAM (Clearpath's `slam.launch.py`, brought up by a retrying lifecycle manager), then Nav2 (Nav2's `navigation_launch.py`) once SLAM publishes a map, with Clearpath's Nav2 parameters plus Bird Nose's changes |
 | `launch/rviz.launch.py` | Clearpath's navigation RViz view, with the namespace read from `robot.yaml` |
+| `launch/scenario.launch.py` | One scenario end to end: simulation, then Nav2 and the survey once the simulation publishes, plus recording; stops when the survey ends |
 
 ## Usage
 
@@ -48,6 +49,20 @@ Or the whole stack with Compose: `docker compose -f containers/compose.yaml --pr
 | `scan_topic` | empty | Scan topic for Nav2 and SLAM. Empty picks one from `robot.yaml`: the Ouster's `/<namespace>/sensors/lidar3d_0/scan` when there is no 2D lidar, as on Bird Nose. |
 | `nav2_overrides` | `bird_nose_navigation/config/nav2_overrides.yaml` | Bird Nose's changes to Clearpath's Nav2 parameters; see [bird_nose_navigation](../bird_nose_navigation/README.md) |
 
+### scenario.launch.py arguments
+
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| `scenario` | `orchard_nav_survey` | Scenario name in `config/scenarios/`, or a file path |
+| `seed` | empty | Random seed; empty uses the scenario's own |
+| `headless` | `false` | Run Gazebo without its window |
+| `rviz` | `false` | Also open Clearpath's RViz view |
+| `record` | `true` | Record the run with `record_run` (to `data/bags/<date>_<time>_scenario-<name>/`) |
+
+`scenario.launch.py` uses event handlers rather than fixed delays: Nav2 and the survey start when `wait_for_topics` sees `/clock` and odometry, and the whole launch shuts down when the survey node exits or the scenario's `timeout_s` passes. It refuses to run on ROS domain 0. Run and judge in one step with `tools/ci/run_scenario.sh`.
+
+> **Side note: event handlers instead of sleeps.** A fixed delay ("start Nav2 after 30 s") is too short on a slow computer and wastes time on a fast one. `RegisterEventHandler(OnProcessExit(...))` starts the next part exactly when the previous one reports it is ready, which also makes runs more repeatable.
+
 ### rviz.launch.py arguments
 
 | Argument | Default | Meaning |
@@ -65,6 +80,15 @@ These launch files add no nodes of their own. The simulated robot publishes Clea
 - The robot comes from [`config/robots/husky-a200/robot.yaml`](../../config/robots/README.md).
 - Every terminal and container must share `ROS_DOMAIN_ID` (42 for simulation) and `RMW_IMPLEMENTATION`; the dev container sets both.
 
+## Why start-up is staged
+
+`nav2.launch.py` starts in two stages instead of all at once:
+
+1. **SLAM, managed.** Clearpath's `slam.launch.py` runs with `autostart:=false`, and a Nav2 lifecycle manager, `lifecycle_manager_slam_toolbox`, configures and activates `slam_toolbox` and `map_saver`. The manager waits for each node's services and retries. slam_toolbox's own autostart sends a single configure request at launch and gives up if the node is still busy, which left SLAM off for a whole run when everything started at once on hero.
+2. **Nav2, after the first map.** `wait_for_topics` waits for `/<namespace>/map` (up to 180 s), then Nav2 starts. Nav2's global costmap needs the `map` frame to activate; started earlier, it can time out and Nav2's lifecycle manager aborts the whole bring-up.
+
+> **Side note: why staging beats longer timeouts.** Starting everything at once creates a burst of load just when every node is waiting on every other, so timeouts trip at random. Waiting for evidence that the previous stage works (a published map) removes the race instead of hoping a bigger timeout is big enough.
+
 ## Why Nav2 is pointed at the Ouster
 
 Clearpath's Nav2 demos default to a 2D lidar scan, `sensors/lidar2d_0/scan`. Bird Nose has no 2D lidar, so `nav2.launch.py` reads `robot.yaml` from the setup folder and passes the Ouster's scan topic instead. In simulation, Clearpath's Gazebo bridge publishes that topic as `sensor_msgs/LaserScan` alongside the point cloud (`sensors/lidar3d_0/points`). It is a single ring, so SLAM accepts it without flattening the point cloud first. `nav2.launch.py` stops with a clear error if the simulation has not written `robot.yaml` yet.
@@ -80,7 +104,7 @@ Clearpath's generators write launch and parameter files next to `robot.yaml`. Mo
 ## Limitations
 
 - `nav2.launch.py` reproduces what Clearpath's `nav2.launch.py` does to its parameters (scan topic, drive type, rolling or static global costmap) so it can add Bird Nose's changes. If Clearpath changes that file, compare it with `clearpath_rewrites()` in `bird_nose_navigation`. Composition (all Nav2 nodes in one process) is not offered; Clearpath's launch file has it off by default too.
-- The global costmap always covers the whole map, also with SLAM, as in every Phase 2 and 3 run. Clearpath's file would make it a 20 m by 20 m window around the robot when SLAM is on, which leaves goals more than about 10 m away unplannable.
+- With SLAM (the default), the global costmap is Clearpath's 20 m by 20 m window that moves with the robot, so a goal must be within about 10 m. A costmap sized to the SLAM map would not work on open ground: it covers only what the lidar has hit, and goals beyond it are rejected at once. With `slam:=false` and a saved map, the costmap covers the whole map.
 - The simulated Ouster scan works with SLAM and Nav2 as-is: it is one ring of 1024 points from −π to +π at about 11.5 Hz (first Phase 2 run, 2026-11-06). The physical Ouster's driver may publish differently; check in Phase 5.
 
 ## See also

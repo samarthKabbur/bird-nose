@@ -10,6 +10,7 @@ Scripts that the CI workflows run, written so that you can run the same check yo
 | --- | --- | --- |
 | `check_docs.py` | Checks that the docs still match the code (see below) | Host or container; needs only Python 3 and Git |
 | `diff_params.py` | Lists every parameter that differs between two ROS parameter files, such as Clearpath's Nav2 file and the one Bird Nose generates | Host or container; needs Python 3 and PyYAML |
+| `run_scenario.sh` | Builds, runs one scenario with `scenario.launch.py`, then judges the recording with `evaluate_run`; exit status 0 pass, 1 fail, 2 could not evaluate | Inside the dev container |
 | `sim_smoke.sh` | Starts the simulation without a window, starts Nav2 with SLAM, sends one goal, and passes if the robot reaches it | Inside the dev container |
 
 ## Usage
@@ -24,6 +25,15 @@ tools/ci/sim_smoke.sh
 GOAL_X=2.0 GOAL_Y=0.5 tools/ci/sim_smoke.sh
 SIM_HEADLESS=false tools/ci/sim_smoke.sh     # show the Gazebo window
 ```
+
+```bash
+# In a ./tools/dev.sh shell, with no other simulation running.
+tools/ci/run_scenario.sh                         # orchard_nav_survey, with the Gazebo window
+SIM_HEADLESS=true tools/ci/run_scenario.sh       # without the window (needs GPU=1 on hero)
+SEED=7 tools/ci/run_scenario.sh orchard_nav_survey
+```
+
+`run_scenario.sh` writes the launch log to `data/reports/scenario_logs/`, the recording to `data/bags/`, and the report to `data/reports/<recording>/`. It adds two load counts from the launch log to the report, which the recording cannot show: drive commands the wheel controller rejected as stale, and Nav2 control loops that missed 20 Hz. High numbers mean the computer could not keep up, so a pass or fail may be luck. Like `sim_smoke.sh`, it refuses ROS domain 0, discovery wider than localhost, a domain that already has nodes running, and a Gazebo simulation that is already running (Gazebo's server is not a ROS node, so `ros2 node list` does not show it).
 
 `check_docs.py` checks:
 
